@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_blocks_testimonial_item",
+  "info": {
+    "displayName": "Testimonial Item",
+    "icon": "quote"
+  },
+  "options": {},
+  "attributes": {
+    "quote": {
+      "type": "text"
+    },
+    "author": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    }
+  }
+}

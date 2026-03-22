@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_blocks_cta",
+  "info": {
+    "displayName": "CTA",
+    "icon": "cursor"
+  },
+  "options": {},
+  "attributes": {
+    "headline": {
+      "type": "string"
+    },
+    "buttonText": {
+      "type": "string"
+    },
+    "buttonLink": {
+      "type": "string"
+    }
+  }
+}

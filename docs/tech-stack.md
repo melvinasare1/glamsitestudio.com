@@ -95,7 +95,7 @@ Document the chosen approach in [pricing.md](pricing.md) and in ops so accountin
                             │ links / funnel
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  ternarie.com (Next.js on Vercel)                            │
+│  glamsitestudio (Next.js on Vercel)                            │
 │  → Marketing, pricing, signup, Stripe checkout               │
 └───────────────────────────┬─────────────────────────────────┘
                             │

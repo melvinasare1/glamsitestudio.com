@@ -1,0 +1,15 @@
+{
+  "collectionName": "components_blocks_services",
+  "info": {
+    "displayName": "Services",
+    "icon": "grid"
+  },
+  "options": {},
+  "attributes": {
+    "services": {
+      "type": "component",
+      "repeatable": true,
+      "component": "blocks.service-item"
+    }
+  }
+}

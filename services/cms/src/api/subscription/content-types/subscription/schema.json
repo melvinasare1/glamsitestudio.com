@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscriptions",
+  "info": {
+    "singularName": "subscription",
+    "pluralName": "subscriptions",
+    "displayName": "Subscription"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "client": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::client.client",
+      "inversedBy": "subscription"
+    },
+    "plan": {
+      "type": "enumeration",
+      "enum": ["79", "199", "custom"]
+    },
+    "seats": {
+      "type": "integer",
+      "default": 1
+    },
+    "pricePerSeat": {
+      "type": "integer",
+      "default": 20
+    },
+    "stripeSubscriptionId": {
+      "type": "string"
+    }
+  }
+}
