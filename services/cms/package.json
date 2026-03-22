@@ -1,5 +1,5 @@
 {
-  "name": "glamsite-cms",
+  "name": "cms",
   "version": "0.1.0",
   "private": true,
   "description": "Multi-tenant Strapi CMS (one instance, many clients)",
