@@ -1,0 +1,477 @@
+/* Ported from CrownedGH CrownedHairBanner.css — scoped + responsive centering. */
+
+.hb-hero {
+  --olive: #aaa184;
+  --olive-dark: #91886d;
+  --cream: #f7f1df;
+  --gold: #d9c991;
+
+  position: relative;
+  min-height: 760px;
+  overflow: hidden;
+  color: var(--cream);
+  background-color: #c4b896;
+  background-image: url("/store/hair-beauty-template/hero-bg.png");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  font-family: var(--font-hair-body), "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
+.hb-hero__content {
+  position: relative;
+  min-height: 760px;
+  width: 100%;
+  max-width: min(1680px, 100%);
+  margin: 0 auto;
+  padding: 32px clamp(1rem, 5.5%, 5.5%) 0;
+  box-sizing: border-box;
+}
+
+.hb-hero__header {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 48px;
+}
+
+.hb-hero__menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--cream);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.hb-hero__menu-toggle svg {
+  width: 26px;
+  height: 26px;
+}
+
+.hb-hero__brand {
+  justify-self: start;
+  font-family: var(--font-hair-display), "Cormorant Garamond", ui-serif, Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-decoration: none;
+}
+
+.hb-hero__nav {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2.2vw, 34px);
+  white-space: nowrap;
+}
+
+.hb-hero__nav a {
+  color: var(--cream);
+  text-decoration: none;
+  font:
+    500 13px var(--font-hair-body),
+    "Montserrat",
+    sans-serif;
+  letter-spacing: 0.13em;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.hb-hero__icons {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.hb-hero__icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--cream);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hb-hero__icon-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+.hb-hero__badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--cream);
+  color: #4f4a3d;
+  font:
+    600 10px/16px var(--font-hair-body),
+    "Montserrat",
+    sans-serif;
+  text-align: center;
+}
+
+.hb-hero__mobile-nav {
+  display: none;
+}
+
+.hb-hero__copy {
+  position: absolute;
+  z-index: 3;
+  top: clamp(140px, 22vh, 205px);
+  left: clamp(1rem, 5.5%, 5.5%);
+  width: min(520px, calc(48% - 1rem));
+  max-width: calc(100% - 2rem);
+  box-sizing: border-box;
+}
+
+.hb-hero__eyebrow {
+  margin: 0 0 28px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+}
+
+.hb-hero__copy h1 {
+  margin: 0;
+  font-family: var(--font-hair-display), "Cormorant Garamond", ui-serif, Georgia, serif;
+  font-size: clamp(2.75rem, 5.5vw, 6.75rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.025em;
+  overflow-wrap: break-word;
+}
+
+.hb-hero__copy h1 em {
+  font-family: var(--font-hair-display), "Cormorant Garamond", ui-serif, Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.02em;
+}
+
+.hb-hero__description {
+  max-width: 300px;
+  margin: 35px 0 28px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: rgba(247, 241, 223, 0.9);
+}
+
+.hb-hero__shop {
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  height: 40px;
+  max-height: 40px;
+  padding: 0 24px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--cream);
+  color: #4f4a3d;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.hb-hero__shop:hover {
+  transform: translateY(-2px);
+  background: white;
+}
+
+.hb-hero__shop span {
+  font-size: 20px;
+}
+
+.hb-hero__model {
+  position: absolute;
+  z-index: 2;
+  right: clamp(12px, 3vw, 50px);
+  bottom: 100px;
+  width: min(49.4%, 817px);
+  max-height: 560px;
+  height: auto;
+  object-fit: contain;
+  object-position: bottom right;
+  pointer-events: none;
+}
+
+.hb-hero__benefits {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 100px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  padding: 0 1.5%;
+  box-sizing: border-box;
+  background: #8a8165;
+  border-top: 1px solid rgba(247, 241, 223, 0.22);
+}
+
+.hb-hero__benefit {
+  min-height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-right: 1px solid rgba(247, 241, 223, 0.32);
+}
+
+.hb-hero__benefit:last-child {
+  border-right: 0;
+}
+
+.hb-hero__benefit-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  color: var(--cream);
+}
+
+.hb-hero__benefit-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  line-height: 1.45;
+  color: var(--cream);
+  text-transform: uppercase;
+}
+
+.hb-hero__benefit-text b {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+@media (max-width: 1100px) {
+  .hb-hero__copy {
+    width: min(440px, calc(52% - 1rem));
+  }
+
+  .hb-hero__copy h1 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .hb-hero__model {
+    width: min(46%, 640px);
+    bottom: 96px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hb-hero {
+    min-height: 0;
+    overflow: visible;
+    background-image: url("/store/hair-beauty-template/hero-bg-mobile.png");
+    background-position: top center;
+    background-size: cover;
+  }
+
+  .hb-hero__content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px 5% 0;
+  }
+
+  .hb-hero__menu-toggle {
+    display: inline-flex;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hb-hero__nav {
+    display: none;
+  }
+
+  .hb-hero__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    grid-template-columns: none;
+    gap: 0;
+  }
+
+  .hb-hero__brand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    justify-self: auto;
+    text-align: center;
+    z-index: 1;
+  }
+
+  .hb-hero__icons {
+    position: relative;
+    z-index: 2;
+    justify-self: auto;
+  }
+
+  .hb-hero__mobile-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+    padding: 8px 0 4px;
+    border-top: 1px solid rgba(247, 241, 223, 0.25);
+  }
+
+  .hb-hero__mobile-nav a {
+    color: var(--cream);
+    text-decoration: none;
+    font:
+      500 14px/1.2 var(--font-hair-body),
+      "Montserrat",
+      sans-serif;
+    letter-spacing: 0.14em;
+    padding: 12px 4px;
+  }
+
+  .hb-hero__copy {
+    position: static;
+    z-index: auto;
+    width: 100%;
+    max-width: 520px;
+    margin: 36px auto 28px;
+    text-align: center;
+  }
+
+  .hb-hero__copy h1 {
+    font-size: clamp(2.75rem, 11vw, 4.25rem);
+  }
+
+  .hb-hero__description {
+    max-width: 260px;
+    margin: 22px auto 24px;
+  }
+
+  .hb-hero__shop {
+    justify-content: center;
+    width: min(100%, 240px);
+    gap: 14px;
+    padding: 0 18px;
+  }
+
+  .hb-hero__benefits {
+    position: static;
+    z-index: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    order: 10;
+    width: 100%;
+    margin: 0;
+    min-height: 72px;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 10px 0;
+    background: transparent;
+    border-top: 0;
+  }
+
+  .hb-hero__benefit {
+    min-height: 0;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 4px;
+    text-align: center;
+    border-right: 1px solid rgba(247, 241, 223, 0.35);
+  }
+
+  .hb-hero__benefit:last-child {
+    border-right: 0;
+  }
+
+  .hb-hero__benefit-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hb-hero__benefit-text {
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+  }
+
+  .hb-hero__model {
+    position: static;
+    z-index: auto;
+    right: auto;
+    bottom: auto;
+    order: 5;
+    display: block;
+    width: min(100%, 420px);
+    max-width: none;
+    max-height: none;
+    margin: 8px auto 0;
+    object-position: bottom center;
+  }
+}
+
+@media (max-width: 600px) {
+  .hb-hero__brand {
+    font-size: 1.15rem;
+  }
+
+  .hb-hero__copy {
+    margin-top: 28px;
+  }
+
+  .hb-hero__copy h1 {
+    font-size: clamp(2.5rem, 12vw, 3.125rem);
+  }
+
+  .hb-hero__eyebrow {
+    margin-bottom: 18px;
+    font-size: 11px;
+  }
+
+  .hb-hero__description {
+    max-width: 240px;
+    font-size: 14px;
+  }
+
+  .hb-hero__shop {
+    width: min(100%, 210px);
+    font-size: 11px;
+  }
+
+  .hb-hero__benefit-text {
+    font-size: 6.5px;
+  }
+
+  .hb-hero__model {
+    width: 100%;
+  }
+}

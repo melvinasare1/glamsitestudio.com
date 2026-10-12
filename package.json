@@ -1,20 +1,27 @@
 {
   "name": "glamsitestudio",
   "private": true,
-  "packageManager": "npm@10.0.0",
+  "packageManager": "npm@11.17.0",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "services/*"
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build"
-  },
-  "devDependencies": {
-    "turbo": "latest"
+    "dev:web": "turbo run dev --filter=web",
+    "dev:dashboard": "turbo run dev --filter=dashboard",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "start": "turbo run start",
+    "seed:storefront": "node scripts/seed-storefront.mjs"
   },
   "dependencies": {
-    "pg": "^8.20.0"
+    "@supabase/supabase-js": "^2.112.4"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.8"
+  },
+  "engines": {
+    "npm": ">=10.8.2"
   }
 }

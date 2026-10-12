@@ -1,0 +1,32 @@
+{
+  "name": "@glamsite/shared",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./mappers": "./src/mappers.ts",
+    "./types": "./src/types/index.ts",
+    "./store-domain": "./src/store-domain.ts",
+    "./id-verification": "./src/id-verification.ts",
+    "./id-verification-admin": "./src/id-verification-admin.ts",
+    "./storefront-content-schema": "./src/storefront-content-schema.ts",
+    "./supabase/client": "./src/supabase/client.ts",
+    "./supabase/server": "./src/supabase/server.ts",
+    "./supabase/admin": "./src/supabase/admin.ts",
+    "./supabase/env": "./src/supabase/env.ts",
+    "./supabase/middleware": "./src/supabase/middleware.ts"
+  },
+  "scripts": {
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4"
+  },
+  "devDependencies": {
+    "next": "14.2.5",
+    "typescript": "^5.5.4"
+  },
+  "peerDependencies": {
+    "next": "14.2.5"
+  }
+}
