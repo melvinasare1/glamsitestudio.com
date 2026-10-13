@@ -10,9 +10,11 @@ Sites Plan" doc.
 - [x] Copy Ansaa into this repo (no `.git`, env files or `node_modules`)
 - [x] Rebrand: `@glamsite/shared`, `glamsitestudio.com`, product name
 - [x] Project rules in `AGENTS.md`
-- [ ] New Supabase project; run `supabase/migrations/` in order
-- [ ] New Vercel projects for `apps/web` and `apps/dashboard`, with a wildcard
-      subdomain on the platform domain
+- [x] Infrastructure spec and env var matrix in `docs/infrastructure.md`
+- [ ] Supabase org "Glam Site Studios" with production and staging projects;
+      run `supabase/migrations/` in order on both
+- [ ] Vercel projects `glamsitestudio-web` and `glamsitestudio-dashboard`,
+      with a wildcard subdomain on the platform domain
 - [ ] Confirm both apps boot on the new infrastructure (gate)
 
 Known leftovers to remove in stage 2: Template A demo images still load from
