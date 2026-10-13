@@ -3,10 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
 /**
- * Refresh the Auth session cookies, then gate seller-only routes.
+ * Refresh the Auth session cookies, then gate owner-only dashboard routes.
  *
- * Storefront (`/store/...`) is intentionally not in the middleware matcher —
- * those pages stay public and never hit this function.
+ * Public sites are served by apps/web and never hit this function.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -15,7 +14,7 @@ export async function updateSession(request: NextRequest) {
   const key = getSupabaseAnonKey();
   const path = request.nextUrl.pathname;
   const isDashboard = path === "/dashboard" || path.startsWith("/dashboard/");
-  const isAuthPage = path === "/login" || path === "/signup-seller";
+  const isAuthPage = path === "/login" || path === "/signup";
   // Server Actions POST to the current page. Redirecting those requests
   // (e.g. after signUp sets a session) makes Next return undefined to the
   // client — `"error" in result` then throws.

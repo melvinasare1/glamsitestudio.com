@@ -1,67 +1,58 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const CONTACT_WHATSAPP_GREETING =
-  "Hello, I'd like to get in touch about your store.";
-
-export type ContactSubmitInput = {
-  storeSlug: string;
+export type EnquiryInput = {
+  slug: string;
   name: string;
   email: string;
+  phone: string;
   message: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function trim(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
 }
 
-export function parseContactSubmitBody(
+/**
+ * Validates a contact form post. `website` is a honeypot field that real
+ * visitors never see; anything in it means a bot.
+ */
+export function parseEnquiry(
   raw: unknown
-): { ok: true; data: ContactSubmitInput } | { ok: false; error: string } {
+): { ok: true; data: EnquiryInput } | { ok: false; error: string; bot?: boolean } {
   const body = asRecord(raw);
-  const storeSlug = trim(body.storeSlug, 80);
+  if (trim(body.website, 200)) return { ok: false, error: "Rejected.", bot: true };
+
+  const slug = trim(body.slug, 63);
   const name = trim(body.name, 120);
   const email = trim(body.email, 254).toLowerCase();
-  const message = trim(body.message, 2000);
+  const phone = trim(body.phone, 40);
+  const message = trim(body.message, 4000);
 
-  if (!storeSlug) return { ok: false, error: "Missing store." };
+  if (!slug) return { ok: false, error: "Missing site." };
   if (!name) return { ok: false, error: "Please enter your name." };
-  if (!email || !EMAIL_RE.test(email)) {
-    return { ok: false, error: "Please enter a valid email address." };
-  }
+  if (!email && !phone) return { ok: false, error: "Please add an email or phone number so they can reply." };
+  if (email && !EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
   if (!message) return { ok: false, error: "Please enter a message." };
 
-  return { ok: true, data: { storeSlug, name, email, message } };
+  return { ok: true, data: { slug, name, email, phone, message } };
 }
 
-/** Digits for wa.me, with a leading Ghana 0 converted to 233. */
-export function whatsappDigits(phone: string): string | null {
-  const raw = phone.trim();
-  if (!raw) return null;
-  let digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.startsWith("0") && digits.length >= 9) {
-    digits = `233${digits.slice(1)}`;
-  }
-  if (digits.length < 9) return null;
-  return digits;
-}
+const CALLING_CODES: Record<string, string> = { GB: "44", IE: "353", US: "1", GH: "233", NG: "234" };
 
-export function whatsappHref(phone: string, message: string): string | null {
-  const digits = whatsappDigits(phone);
+/** Digits for wa.me. A leading 0 is replaced with the business's country code. */
+export function whatsappHref(phone: string, country: string): string | null {
+  let digits = phone.trim().replace(/\D/g, "");
   if (!digits) return null;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  else if (digits.startsWith("0") && CALLING_CODES[country]) digits = CALLING_CODES[country] + digits.slice(1);
+  return digits.length >= 9 ? `https://wa.me/${digits}` : null;
 }
 
 export function telHref(phone: string): string | null {
-  const trimmed = phone.trim();
-  if (!trimmed) return null;
-  const digits = trimmed.replace(/[^\d+]/g, "");
-  if (digits.replace(/\D/g, "").length < 7) return null;
-  return `tel:${digits}`;
+  const digits = phone.trim().replace(/[^\d+]/g, "");
+  return digits.replace(/\D/g, "").length >= 7 ? `tel:${digits}` : null;
 }

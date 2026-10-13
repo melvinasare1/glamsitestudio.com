@@ -13,13 +13,14 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "start": "turbo run start",
-    "seed:storefront": "node scripts/seed-storefront.mjs"
+    "test:db": "node supabase/tests/rls.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4"
   },
   "devDependencies": {
-    "turbo": "^2.5.8"
+    "turbo": "^2.5.8",
+    "@electric-sql/pglite": "0.2.17"
   },
   "engines": {
     "npm": ">=10.8.2"

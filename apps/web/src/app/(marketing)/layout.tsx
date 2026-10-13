@@ -1,13 +1,13 @@
 import Header from "@/components/marketing/Header";
-import { marketingNav, sellerLoginHref, sellerOnboardingHref } from "@/components/marketing/nav";
+import { marketingNav, ownerLoginHref, ownerSignupHref } from "@/components/marketing/nav";
 
 export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const loginHref = sellerLoginHref();
-  const onboardingHref = sellerOnboardingHref();
+  const loginHref = ownerLoginHref();
+  const onboardingHref = ownerSignupHref();
 
   return (
     <>
@@ -19,7 +19,7 @@ export default function MarketingLayout({
             <div>
               <p className="font-display text-xl font-semibold">Glam Site Studios</p>
               <p className="mt-2 max-w-xs text-sm text-white/70">
-                Storefront first. Fulfilment if you want it.
+                Websites for hair and beauty businesses.
               </p>
             </div>
             <div className="flex flex-col gap-6 sm:items-end">

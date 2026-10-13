@@ -1,59 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
-import { parseContactSubmitBody } from "@/lib/contact";
+import { parseEnquiry } from "@/lib/contact";
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+/** Contact form on a live site → enquiries (shown in that owner's dashboard). */
 export async function POST(req: NextRequest) {
   let raw: unknown;
   try {
     raw = await req.json();
   } catch {
-    return jsonError("Invalid request body.", 400);
+    return jsonError("Invalid request.", 400);
   }
 
-  const parsed = parseContactSubmitBody(raw);
-  if (!parsed.ok) return jsonError(parsed.error, 400);
+  const parsed = parseEnquiry(raw);
+  if (!parsed.ok) {
+    // Pretend bots succeeded so they don't retry.
+    return parsed.bot ? NextResponse.json({ ok: true }, { status: 201 }) : jsonError(parsed.error, 400);
+  }
 
   let supabase;
   try {
     supabase = createAdminClient();
   } catch (err) {
-    console.error("Contact POST is missing the Supabase service role", err);
-    return jsonError("Contact is not configured on this store.", 500);
+    console.error("[contact] service role missing", err);
+    return jsonError("Messages aren't set up on this site yet.", 500);
   }
 
-  const { data: sellerRow, error: sellerError } = await supabase
-    .from("sellers")
-    .select("id, store_slug")
-    .eq("store_slug", parsed.data.storeSlug)
+  const { data: business, error: lookupError } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("slug", parsed.data.slug)
+    .eq("status", "live")
     .maybeSingle();
 
-  if (sellerError) {
-    console.error("Failed to look up seller for contact", sellerError);
-    return jsonError("Could not look up this store. Please try again.", 500);
+  if (lookupError) {
+    console.error("[contact] business lookup failed", lookupError);
+    return jsonError("Something went wrong. Please try again.", 500);
   }
-  if (!sellerRow) {
-    return jsonError("This store could not be found.", 404);
-  }
+  if (!business) return jsonError("This site isn't accepting messages.", 404);
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("contact_enquiries")
-    .insert({
-      seller_id: sellerRow.id,
-      name: parsed.data.name,
-      email: parsed.data.email,
-      message: parsed.data.message,
-    })
-    .select("id")
-    .single();
+  const { error } = await supabase.from("enquiries").insert({
+    business_id: business.id,
+    name: parsed.data.name,
+    email: parsed.data.email,
+    phone: parsed.data.phone,
+    message: parsed.data.message,
+  });
 
-  if (insertError || !inserted) {
-    console.error("Failed to insert contact enquiry", insertError);
+  if (error) {
+    console.error("[contact] insert failed", error);
     return jsonError("Could not send your message. Please try again.", 500);
   }
 
-  return NextResponse.json({ id: inserted.id }, { status: 201 });
+  return NextResponse.json({ ok: true }, { status: 201 });
 }

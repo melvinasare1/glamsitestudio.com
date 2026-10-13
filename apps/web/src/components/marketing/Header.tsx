@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { marketingNav, sellerLoginHref, sellerOnboardingHref } from "./nav";
+import { marketingNav, ownerLoginHref, ownerSignupHref } from "./nav";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const loginHref = sellerLoginHref();
-  const onboardingHref = sellerOnboardingHref();
+  const loginHref = ownerLoginHref();
+  const onboardingHref = ownerSignupHref();
 
   return (
     <header className="sticky top-0 z-50 border-b border-wire bg-white/95 backdrop-blur">
