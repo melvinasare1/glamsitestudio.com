@@ -43,9 +43,12 @@ events and leads.
 
 - [ ] glamsitestudio.com marketing pages: template gallery, live demos,
       pricing, FAQ
-- [ ] Stripe products: self-serve ($49 + $15/month), done-for-you ($299 +
-      $15/month), annual hosting ($150)
-- [ ] Checkout in subscription mode with the one-off fee as a line item
+- [ ] Stripe products: five template prices ($27 to $97, one-off),
+      done-for-you setup ($299, one-off), hosting ($15/month or $150/year),
+      booking add-on (about $24/month)
+- [ ] First-month hosting for $1: a Stripe coupon for $14 off, applied once
+- [ ] Checkout in subscription mode: hosting is always included; the template
+      fee and optional setup fee are one-off line items
 - [ ] `checkout.session.completed` webhook creates the business and sends a
       Supabase invite
 - [ ] Subscription webhooks keep `subscription_status` in sync
@@ -70,5 +73,6 @@ events and leads.
       connected account
 - [ ] Confirmation and reminder emails; SMS or WhatsApp later
 - [ ] Dashboard calendar per staff member and a client list
-- [ ] Booking unlocked by the site + booking plan
+- [ ] Booking unlocked by the booking add-on on the hosting subscription;
+      owners who keep their own tool just paste its link
 - [ ] Pilot with 3 site customers
