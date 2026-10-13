@@ -7,7 +7,7 @@ import { marketingNav, ownerLoginHref, ownerSignupHref } from "./nav";
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-didone text-[1.35rem] leading-none tracking-tight ${className}`}>
+    <span className={`font-didone text-[1.45rem] font-medium leading-none tracking-[-0.02em] ${className}`}>
       Glam Site <span className="italic">Studios</span>
     </span>
   );
@@ -17,8 +17,8 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-porcelain/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 md:px-8">
+    <header className="sticky top-0 z-50 border-b border-plum/5 bg-[#FCEFF3]/90 backdrop-blur">
+      <div className="mx-auto flex max-w-[82rem] items-center justify-between gap-4 px-5 py-4 md:px-8">
         <Link href="/" className="text-plum" aria-label="Glam Site Studios home">
           <Wordmark />
         </Link>

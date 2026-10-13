@@ -20,7 +20,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <Header />
       {children}
       <footer className="border-t border-hairline">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-12 md:flex-row md:items-end md:justify-between md:px-8">
+        <div className="mx-auto flex max-w-[82rem] flex-col gap-8 px-5 py-12 md:flex-row md:items-end md:justify-between md:px-8">
           <div>
             <Wordmark />
             <p className="mt-3 max-w-xs text-sm text-mauve">Websites for hair and beauty businesses.</p>
@@ -36,7 +36,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </a>
           </nav>
         </div>
-        <p className="mx-auto max-w-6xl px-5 pb-10 text-xs text-mauve/80 md:px-8">
+        <p className="mx-auto max-w-[82rem] px-5 pb-10 text-xs text-mauve/80 md:px-8">
           © {new Date().getFullYear()} Glam Site Studios
         </p>
       </footer>

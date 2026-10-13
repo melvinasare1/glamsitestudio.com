@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Check } from "lucide-react";
-import { TEMPLATES } from "@glamsite/shared/templates";
 import { LeadForm } from "@/components/marketing/LeadForm";
-import { PhoneDemo } from "@/components/marketing/PhoneDemo";
+import { TemplateGallery } from "@/components/marketing/TemplateGallery";
 import { ownerSignupHref } from "@/components/marketing/nav";
 
 export const metadata: Metadata = {
@@ -67,30 +67,68 @@ export default function HomePage() {
 
   return (
     <main>
-      {/* Hero: copy on the left, the live product on the right. */}
-      <section className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-12 md:grid-cols-[1.15fr_1fr] md:px-8 md:pb-28 md:pt-20">
-        <div>
-          <h1 className="font-didone text-[2.9rem] leading-[1.02] tracking-[-0.02em] sm:text-6xl lg:text-[5.2rem]">
-            Your salon&apos;s website, live today.
-          </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-mauve">
-            Pick a design, add your services and photos from your phone, and send clients one link from your Instagram
-            bio.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
+      {/* Hero: copy on the left; a salon site on a studio desk filling the right half. */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#FCEFF3] to-[#FDF5F7]">
+        <div className="mx-auto max-w-[82rem] px-5 pt-10 md:px-8 lg:flex lg:min-h-[36rem] lg:items-center lg:py-14">
+          <div className="relative z-10 lg:w-[56%]">
+            <h1 className="font-didone text-[3.1rem] font-semibold leading-[0.92] tracking-[-0.045em] sm:text-7xl lg:text-[4.3rem] xl:text-[4.85rem]">
+              Your salon&apos;s
+              <br />
+              website, live today.
+            </h1>
+            <p className="mt-7 max-w-[30rem] text-lg leading-relaxed text-plum/80 md:text-xl">
+              Pick a design, add your services and photos, and send clients one link from your Instagram.
+            </p>
+            <div className="mt-9 flex flex-wrap items-center gap-x-10 gap-y-4">
+              <a
+                href={signup}
+                className="rounded-full bg-berry px-11 py-4 text-base font-semibold text-white shadow-[0_12px_30px_-12px_rgba(180,35,95,0.7)] transition-colors hover:bg-berry-dark"
+              >
+                Get your website
+              </a>
+              <a
+                href="#templates"
+                className="border-b-2 border-berry/40 pb-0.5 text-base font-semibold text-plum transition-colors hover:border-berry"
+              >
+                View templates
+              </a>
+            </div>
+            <p className="mt-12 text-sm text-plum/70">Works with the booking app you already use</p>
+            <ul className="mt-3 flex flex-wrap items-center gap-x-9 gap-y-2 text-2xl font-bold tracking-[-0.03em] text-plum">
+              <li>Fresha</li>
+              <li>Booksy</li>
+              <li>Acuity</li>
+              <li className="text-base font-medium tracking-normal text-plum/60">and more</li>
+            </ul>
+          </div>
+        </div>
+        <div className="relative mt-10 aspect-[752/546] w-full lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:aspect-auto lg:w-[58%]">
+          <Image
+            src="/marketing/hero-studio.jpg"
+            alt="A Glam Site Studios salon website shown on a desktop screen in a beauty studio"
+            fill
+            priority
+            sizes="(min-width: 1024px) 58vw, 100vw"
+            className="object-cover object-left-bottom [mask-image:linear-gradient(to_right,transparent,black_16%)]"
+          />
+        </div>
+      </section>
+
+      <section id="templates" className="scroll-mt-20 bg-[#FBEAF0]">
+        <div className="mx-auto max-w-[82rem] px-5 py-16 md:px-8 lg:py-20">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <h2 className="font-didone text-5xl font-medium leading-none tracking-[-0.03em] md:text-7xl">
+              Explore our templates
+            </h2>
             <a
-              href={signup}
-              className="rounded-full bg-berry px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-berry-dark"
+              href="/demo/salon"
+              className="rounded-full border border-plum/25 bg-porcelain px-7 py-3.5 text-sm font-semibold transition-colors hover:border-plum"
             >
-              Get your website
-            </a>
-            <a href="#pricing" className="rounded-full px-5 py-3.5 text-base text-plum underline-offset-4 hover:underline">
-              See pricing
+              Try a live demo
             </a>
           </div>
-          <p className="mt-5 text-sm text-mauve">Your first month of hosting is $1.</p>
+          <TemplateGallery />
         </div>
-        <PhoneDemo />
       </section>
 
       <section aria-label="Who it's for" className="border-y border-hairline bg-white">
@@ -137,33 +175,6 @@ export default function HomePage() {
             ))}
           </ul>
         </div>
-      </section>
-
-      <section id="templates" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 md:px-8 md:py-28">
-        <h2 className="font-didone text-4xl leading-tight md:text-5xl">Templates</h2>
-        <p className="mt-4 max-w-lg leading-relaxed text-mauve">
-          Each one is designed for a different kind of business. Open a demo to try it as a client would.
-        </p>
-        <ul className="mt-12 divide-y divide-hairline border-y border-hairline">
-          {TEMPLATES.map((template) => (
-            <li key={template.id} className="flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-didone text-3xl">{template.name}</p>
-                <p className="mt-1 text-mauve">{template.tagline}</p>
-              </div>
-              <a
-                href={`/demo/${template.id}`}
-                className="self-start rounded-full border border-plum/25 px-5 py-2.5 text-sm font-medium transition-colors hover:border-plum sm:self-auto"
-              >
-                Open the {template.name} demo
-              </a>
-            </li>
-          ))}
-          <li className="py-8">
-            <p className="font-didone text-3xl text-mauve">Nails, Lash &amp; brow, Makeup</p>
-            <p className="mt-1 text-mauve">On the way. Start with any template now and switch when yours arrives.</p>
-          </li>
-        </ul>
       </section>
 
       <section id="pricing" className="scroll-mt-24 bg-plum text-white">
