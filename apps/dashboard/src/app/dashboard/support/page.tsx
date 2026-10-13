@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useSeller } from "@/lib/seller-context";
+import { useBusiness } from "@/lib/business-context";
 import { SUPPORT_SUBJECTS, type SupportSubject } from "@/lib/support";
 
 const fieldClass =
   "mt-1.5 w-full rounded-lg border border-black/8 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand";
 
 export default function SupportPage() {
-  const { seller, user } = useSeller();
-  const [name, setName] = useState(seller?.businessName ?? "");
-  const [email, setEmail] = useState(seller?.email || user?.email || "");
-  const [phone, setPhone] = useState(seller?.phone ?? "");
+  const { business, user } = useBusiness();
+  const [name, setName] = useState(business.name);
+  const [email, setEmail] = useState(business.email || user.email || "");
+  const [phone, setPhone] = useState(business.phone);
   const [subject, setSubject] = useState<SupportSubject | "">("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -54,8 +54,9 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="max-w-2xl px-4 py-4 md:py-6 lg:px-6">
-      <p className="text-sm text-muted-foreground">
+    <div className="max-w-2xl px-4 pt-6 lg:px-6">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">Support</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         Something broken, a question, or an idea? Send it through and we&apos;ll get back to you.
       </p>
 
@@ -70,7 +71,7 @@ export default function SupportPage() {
         <form onSubmit={handleSubmit} className="mt-6 rounded-xl border border-black/8 bg-white p-6">
           <h2 className="font-display text-base font-semibold text-ink-950">New ticket</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Name, email, and phone come from your seller profile. Edit them if you want us to use a
+            Name, email, and phone come from your business details. Edit them if you want us to use a
             different contact.
           </p>
 

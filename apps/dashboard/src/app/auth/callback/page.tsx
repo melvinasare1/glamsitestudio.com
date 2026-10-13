@@ -39,7 +39,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <AuthFrame kicker="Seller access" title={error ? "Could not sign you in" : "Signing you in"}>
+    <AuthFrame kicker="Glam Site Studios" title={error ? "Could not sign you in" : "Signing you in"}>
       <p className="mt-6 text-sm text-ink-700">{error ?? "One moment…"}</p>
     </AuthFrame>
   );

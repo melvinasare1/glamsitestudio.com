@@ -119,7 +119,7 @@ export default function ResetPasswordPage() {
 
   if (!ready) {
     return (
-      <AuthFrame kicker="Seller access" title="Reset your password">
+      <AuthFrame kicker="Glam Site Studios" title="Reset your password">
         <p className="mt-6 text-sm text-ink-700">Checking your reset link…</p>
       </AuthFrame>
     );
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
 
   if (linkError) {
     return (
-      <AuthFrame kicker="Seller access" title="Reset your password" description={linkError}>
+      <AuthFrame kicker="Glam Site Studios" title="Reset your password" description={linkError}>
         <p className="mt-8 text-sm text-muted-foreground">
           <Link href="/login" className="font-medium text-navy hover:underline">
             Back to login
@@ -139,9 +139,9 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthFrame
-      kicker="Seller access"
+      kicker="Glam Site Studios"
       title="Choose a new password"
-      description="This updates the password for your seller dashboard."
+      description="This updates the password for your dashboard."
     >
       <form
         onSubmit={handleSubmit}

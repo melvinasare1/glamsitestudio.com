@@ -24,9 +24,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Glam Site Studios: Storefronts, and fulfilment if you want it",
-  description:
-    "A storefront and admin dashboard you run yourself, plus an optional fulfilment add-on where we pack and send every order.",
+  title: "Glam Site Studios dashboard",
+  description: "Edit your salon website, services, team and opening hours.",
 };
 
 export default function RootLayout({

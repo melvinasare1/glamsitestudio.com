@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { getDashboardSession } from "@/lib/seller";
+import { getDashboardSession } from "@/lib/business";
 import {
   escapeHtml,
   isSupportSubject,
@@ -68,9 +68,9 @@ export async function POST(req: NextRequest) {
     }
 
     const subjectLabel = supportSubjectLabel(subjectValue);
-    const businessName = session.seller?.businessName || name;
-    const storeSlug = session.seller?.storeSlug || "Not set";
-    const sellerId = session.seller?.id || session.user.uid;
+    const businessName = session.business?.name || name;
+    const slug = session.business?.slug || "Not set";
+    const businessId = session.business?.id || "None";
 
     const html = `
       <div style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #0b0e14;">
@@ -80,10 +80,10 @@ export async function POST(req: NextRequest) {
         <p><strong>Email:</strong> ${escapeHtml(email)}</p>
         <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
         <hr style="border: none; border-top: 1px solid #e4e1d8; margin: 20px 0;" />
-        <p style="margin: 0 0 8px;"><strong>Seller</strong></p>
+        <p style="margin: 0 0 8px;"><strong>Business</strong></p>
         <p style="margin: 0;">Business: ${escapeHtml(businessName)}</p>
-        <p style="margin: 0;">Store: ${escapeHtml(storeSlug)}</p>
-        <p style="margin: 0 0 16px;">Seller ID: ${escapeHtml(sellerId)}</p>
+        <p style="margin: 0;">Site: ${escapeHtml(slug)}</p>
+        <p style="margin: 0 0 16px;">Business ID: ${escapeHtml(businessId)}</p>
         <hr style="border: none; border-top: 1px solid #e4e1d8; margin: 20px 0;" />
         <p style="white-space: pre-wrap; margin: 0;">${escapeHtml(message)}</p>
       </div>

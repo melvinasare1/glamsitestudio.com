@@ -1,96 +1,46 @@
 "use client";
 
-import { NavMain } from "@/components/nav-main";
-import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
-import { useSeller } from "@/lib/seller-context";
-import { storefrontUrl } from "@/lib/storefront-url";
-import { templateHasBlog } from "@/lib/storefront-templates";
 import {
-  BadgeCheckIcon,
-  BarChart3Icon,
+  CalendarClockIcon,
+  ClockIcon,
+  CreditCardIcon,
   ExternalLinkIcon,
-  GaugeIcon,
   LayoutDashboardIcon,
   LifeBuoyIcon,
-  NewspaperIcon,
-  PackageIcon,
-  PencilIcon,
+  MailIcon,
+  PaletteIcon,
+  ScissorsIcon,
   SettingsIcon,
-  ShoppingBagIcon,
   UsersIcon,
-  WalletIcon,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { NavMain } from "@/components/nav-main";
+import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
+import { useBusiness } from "@/lib/business-context";
 
-const navMain: Array<{
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  external?: boolean;
-}> = [
+type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolean };
+
+const NAV: NavItem[] = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
-  {
-    title: "Orders",
-    url: "/dashboard/orders",
-    icon: ShoppingBagIcon,
-  },
-  { title: "Products", url: "/dashboard/products", icon: PackageIcon },
-  { title: "Editor", url: "/dashboard/editor", icon: PencilIcon },
-  { title: "Customers", url: "/dashboard/customers", icon: UsersIcon },
-  { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3Icon },
+  { title: "Website", url: "/dashboard/website", icon: PaletteIcon },
+  { title: "Services", url: "/dashboard/services", icon: ScissorsIcon },
+  { title: "Team", url: "/dashboard/team", icon: UsersIcon },
+  { title: "Opening hours", url: "/dashboard/hours", icon: ClockIcon },
+  { title: "Booking", url: "/dashboard/booking", icon: CalendarClockIcon },
+  { title: "Messages", url: "/dashboard/messages", icon: MailIcon },
+  { title: "Business details", url: "/dashboard/details", icon: SettingsIcon },
+  { title: "Billing", url: "/dashboard/billing", icon: CreditCardIcon },
   { title: "Support", url: "/dashboard/support", icon: LifeBuoyIcon },
-  { title: "Verify", url: "/dashboard/verify", icon: BadgeCheckIcon },
-  { title: "Settings", url: "/dashboard/settings", icon: SettingsIcon },
 ];
 
-const adminNav: Array<{
-  title: string;
-  url: string;
-  icon: LucideIcon;
-}> = [
-  {
-    title: "Platform",
-    url: "/dashboard/admin/overview",
-    icon: GaugeIcon,
-  },
-  {
-    title: "Billing",
-    url: "/dashboard/admin/billing",
-    icon: WalletIcon,
-  },
-];
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { seller, isAdmin } = useSeller();
-  const storeUrl = storefrontUrl(seller);
-  const items = (() => {
-    if (isAdmin && !seller) {
-      return [...adminNav];
-    }
-    const next = [...navMain];
-    if (isAdmin) {
-      next.unshift(...adminNav);
-    }
-    if (templateHasBlog(seller?.template)) {
-      const editorIndex = next.findIndex((item) => item.url === "/dashboard/editor");
-      next.splice(editorIndex + 1, 0, {
-        title: "Blog",
-        url: "/dashboard/blog",
-        icon: NewspaperIcon,
-      });
-    }
-    if (storeUrl) {
-      next.push({
-        title: "View store",
-        url: storeUrl,
-        icon: ExternalLinkIcon,
-        external: true,
-      });
-    }
-    return next;
-  })();
+  const { business, siteUrl } = useBusiness();
+  const items =
+    business.status === "live"
+      ? [...NAV, { title: "View site", url: siteUrl, icon: ExternalLinkIcon, external: true }]
+      : NAV;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

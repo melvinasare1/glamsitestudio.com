@@ -76,9 +76,9 @@ export default function LoginPage() {
 
   return (
     <AuthFrame
-      kicker="Seller access"
+      kicker="Glam Site Studios"
       title="Log in to your dashboard"
-      description="Use the email and password you created for your store."
+      description="Log in to edit your website."
     >
       <form
         onSubmit={handleSubmit}
@@ -131,8 +131,8 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-8 text-sm text-muted-foreground">
-        New seller?{" "}
-        <Link href="/signup-seller" className="font-medium text-navy hover:underline">
+        New here?{" "}
+        <Link href="/signup" className="font-medium text-navy hover:underline">
           Get your website
         </Link>
       </p>

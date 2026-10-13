@@ -17,29 +17,32 @@ Sites Plan" doc.
       with a wildcard subdomain on the platform domain
 - [ ] Confirm both apps boot on the new infrastructure (gate)
 
-Known leftovers to remove in stage 2: Template A demo images still load from
-Ansaa's public storage bucket; MoMo billing env vars (`ANSAA_MOMO_*`); Hubtel
-env vars.
+## Stage 2 · Reshape for salons
 
-## Stage 2 · Strip and reshape for salons
+Done on 13–14 Oct 2026:
 
-Remove products and everything attached (categories, variants, filters,
-reviews, FAQs), cart, checkout, orders, customers, packaging proof and the
-fulfilment tier, blog, ID verification, MoMo billing, and the retail
-templates.
+- [x] Shared content schema (`packages/shared/src/site-content.ts`), with
+      templates declaring which sections they show
+- [x] Clean baseline migration replacing all Ansaa migrations: businesses,
+      private billing, templates, services and categories, staff, opening
+      hours, staff hours and time off, booking settings, clients,
+      appointments (no double booking), enquiries, leads, site-media bucket
+- [x] RLS test suite (`npm run test:db`), also run against real staging
+- [x] Applied to staging and production; security advisor clean
+- [x] Web app: host routing, starter layout for every template, demo
+      previews, contact form
+- [x] Dashboard: Overview with checklist and Publish, Website editor built
+      from the schema, Services, Team, Opening hours, Booking link,
+      Messages, Business details, Billing placeholder, Support, sign-up
+- [x] Removed products, cart, checkout, orders, MoMo, ID verification,
+      blog, admin billing and the retail templates
 
-Keep tenants and RLS, `store_content` with the schema-driven editor, the
-domain middleware and subdomains, Supabase Auth, contact enquiries, storefront
-events and leads.
+Next in stage 2:
 
-- [ ] Squash migrations into one clean baseline
-- [ ] Decide on renaming `sellers` to `businesses` in that baseline
-- [ ] Prices in minor units plus a `currency` per business
-- [ ] `services` and `staff` tables from day one
-- [ ] Editor pages: Business, Home, Services, Team, Gallery, Hours and
-      location, Booking link
-- [ ] Shared salon layout, then salon and barber templates with demo content
-- [ ] Booking button links out until stage 5
+- [ ] Design and build the Salon and Barber templates (replace the starter
+      layout in `apps/web/src/templates`)
+- [ ] Vercel projects and environment variables, then test the full flow on
+      a preview deployment
 
 ## Stage 3 · Stripe and the storefront
 
