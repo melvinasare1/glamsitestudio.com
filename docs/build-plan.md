@@ -11,8 +11,8 @@ Sites Plan" doc.
 - [x] Rebrand: `@glamsite/shared`, `glamsitestudio.com`, product name
 - [x] Project rules in `AGENTS.md`
 - [x] Infrastructure spec and env var matrix in `docs/infrastructure.md`
-- [ ] Supabase org "Glam Site Studios" with production and staging projects;
-      run `supabase/migrations/` in order on both
+- [x] Supabase org "Glam Site Studio" with production and staging projects;
+      all migrations applied to both, security advisor clean
 - [ ] Vercel projects `glamsitestudio-web` and `glamsitestudio-dashboard`,
       with a wildcard subdomain on the platform domain
 - [ ] Confirm both apps boot on the new infrastructure (gate)

@@ -90,3 +90,16 @@ in a chat. Include:
 3. **Trigger** to build it, if there is one. If there isn't, say so.
 
 Keep resolved items in place and mark them done, so we don't rediscover them.
+
+---
+
+## Glam Site Studios: database performance (stage 2)
+
+- **What:** the Supabase performance advisor flags 26 RLS policies that call
+  `auth.uid()` per row instead of `(select auth.uid())`, one unindexed foreign
+  key (`storefront_events.product_id`), and multiple permissive select
+  policies on `store_blog_posts`.
+- **Why deferred:** almost all of these tables (products, orders, customers,
+  blog, filters) are removed in stage 2, and the clean baseline migration will
+  write the remaining policies the fast way.
+- **Trigger:** the stage 2 baseline migration.

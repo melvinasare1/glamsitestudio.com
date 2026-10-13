@@ -8,7 +8,7 @@ Crouch End (rule 2 in `AGENTS.md`).
 
 | Service | Used for | Account / project | Plan |
 | --- | --- | --- | --- |
-| Supabase | Postgres, Auth, Storage | Org "Glam Site Studios": `glamsitestudio` (production), `glamsitestudio-staging` | Free while building; Pro ($25/mo) for production once the first customer is live |
+| Supabase | Postgres, Auth, Storage | Org "Glam Site Studio": production and `glamsitestudio-staging` | Free while building; Pro ($25/mo) for production once the first customer is live |
 | Vercel | Hosting both apps, subdomains, custom domains, SSL | Team `melvinasare1s-projects`: `glamsitestudio-web`, `glamsitestudio-dashboard` | Pro ($20/mo) before launch (Hobby is non-commercial) |
 | Stripe | Checkout, hosting subscriptions, Customer Portal; later Connect for salon deposits | Glam Site Studios account (UK) | Pay per transaction |
 | Resend | Transactional email, and Supabase Auth email via custom SMTP | Domain `glamsitestudio.com` | Free (3,000/mo) to start |
@@ -16,15 +16,23 @@ Crouch End (rule 2 in `AGENTS.md`).
 
 ## Supabase
 
-Two projects in the Glam Site Studios org, both in London (`eu-west-2`):
+Two projects in the "Glam Site Studio" org (account glamsitestudio@gmail.com),
+both in Ireland (`eu-west-1`):
 
-- **`glamsitestudio`**: production. Only production deployments use it.
-- **`glamsitestudio-staging`**: local development and Vercel preview
-  deployments (rule 10).
+| Project | Ref | Used by |
+| --- | --- | --- |
+| Production ("glamsitestudio@gmail.com's Project") | `ufrfhimjmvltpdtcoord` | Production deployments only |
+| `glamsitestudio-staging` | `idlqgpervgglazzozhkb` | Local development and Vercel previews (rule 10) |
+
+Status (13 Oct 2026): all migrations applied to both, including
+`20261013170000_security_advisor_fixes.sql`. Security advisor is clean apart
+from `billing_payments` having no policies, which is intended (service role
+only).
 
 Setup for each project:
 
-1. Apply `supabase/migrations/` in timestamp order.
+1. Apply `supabase/migrations/` in timestamp order. Migrations containing
+   `drop` statements need approval in Supabase; run them in the SQL Editor.
 2. Confirm the public `product-images` bucket and the private ID-document
    bucket exist (created by the storage migrations).
 3. Auth → URL configuration: site URL = the dashboard URL; add redirect URLs
