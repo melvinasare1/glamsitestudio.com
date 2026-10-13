@@ -1,60 +1,45 @@
-import Header from "@/components/marketing/Header";
-import { marketingNav, ownerLoginHref, ownerSignupHref } from "@/components/marketing/nav";
+import { Bodoni_Moda, Manrope } from "next/font/google";
+import Header, { Wordmark } from "@/components/marketing/Header";
+import { marketingNav, ownerLoginHref } from "@/components/marketing/nav";
 
-export default function MarketingLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const loginHref = ownerLoginHref();
-  const onboardingHref = ownerSignupHref();
+const didone = Bodoni_Moda({
+  subsets: ["latin"],
+  variable: "--font-didone",
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600"],
+  // Next has no fallback metrics for Bodoni Moda; use the declared fallbacks as-is.
+  adjustFontFallback: false,
+  fallback: ["Didot", "Bodoni 72", "Georgia", "serif"],
+});
 
+const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "500", "600", "700"] });
+
+export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className={`${didone.variable} ${sans.variable} min-h-screen bg-porcelain font-sans text-plum`}>
       <Header />
       {children}
-      <footer className="bg-navy text-white">
-        <div className="mx-auto max-w-5xl px-6 py-16">
-          <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="font-display text-xl font-semibold">Glam Site Studios</p>
-              <p className="mt-2 max-w-xs text-sm text-white/70">
-                Websites for hair and beauty businesses.
-              </p>
-            </div>
-            <div className="flex flex-col gap-6 sm:items-end">
-              <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/80">
-                {marketingNav.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="transition hover:text-white"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-              <div className="flex flex-wrap items-center gap-3">
-                <a
-                  href={loginHref}
-                  className="text-sm font-medium text-white/80 transition hover:text-white"
-                >
-                  Login
-                </a>
-                <a
-                  href={onboardingHref}
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-medium text-navy transition hover:bg-white/90"
-                >
-                  Get your website
-                </a>
-              </div>
-            </div>
+      <footer className="border-t border-hairline">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-12 md:flex-row md:items-end md:justify-between md:px-8">
+          <div>
+            <Wordmark />
+            <p className="mt-3 max-w-xs text-sm text-mauve">Websites for hair and beauty businesses.</p>
           </div>
-          <p className="mt-12 border-t border-white/10 pt-6 text-xs text-white/50">
-            © {new Date().getFullYear()} Glam Site Studios
-          </p>
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-mauve">
+            {marketingNav.map((link) => (
+              <a key={link.href} href={link.href} className="hover:text-plum">
+                {link.label}
+              </a>
+            ))}
+            <a href={ownerLoginHref()} className="hover:text-plum">
+              Log in
+            </a>
+          </nav>
         </div>
+        <p className="mx-auto max-w-6xl px-5 pb-10 text-xs text-mauve/80 md:px-8">
+          © {new Date().getFullYear()} Glam Site Studios
+        </p>
       </footer>
-    </>
+    </div>
   );
 }

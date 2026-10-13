@@ -32,9 +32,19 @@ const config: Config = {
         },
         // CTA + secondary — sampled from the navy pill reference.
         navy: "#191A2D",
+        // Glam Site Studios marketing site: aubergine ink, porcelain page,
+        // petal surfaces, berry "lacquer" accent for actions.
+        plum: { DEFAULT: "#2B1631", soft: "#4A3150" },
+        porcelain: "#FFF9FB",
+        petal: { DEFAULT: "#F5E1E8", deep: "#EBCAD7" },
+        berry: { DEFAULT: "#B4235F", dark: "#921A4C" },
+        mauve: "#6F5B74",
+        hairline: "#E9D9E1",
       },
       fontFamily: {
         display: ["var(--font-display)"],
+        didone: ["var(--font-didone)", "Didot", "Bodoni 72", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         body: ["var(--font-body)"],
         mono: ["var(--font-mono)"],
       },
