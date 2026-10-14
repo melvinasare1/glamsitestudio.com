@@ -54,6 +54,18 @@ function BookButton({ href, label, className = "" }: { href: string; label: stri
   );
 }
 
+/** Secondary action, e.g. "Learn more" in the Luxe style guide. */
+function OutlineButton({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      className="mt-8 inline-flex min-h-11 items-center rounded-full border border-[var(--lx-gold)] px-7 py-3 text-base font-medium leading-5 text-[var(--lx-ink)] transition hover:bg-[var(--lx-gold)] hover:text-[var(--lx-gold-ink)]"
+    >
+      {children}
+    </a>
+  );
+}
+
 /** "Luxe Hair Studio" → LUXE over HAIR STUDIO, like the Luxe wordmark. */
 function Wordmark({ name, logo }: { name: string; logo: string }) {
   if (logo) return <img src={logo} alt={name} className="h-11 w-auto" />;
@@ -248,14 +260,15 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
 
         {showAbout ? (
           <section id="about" className={`${sectionPad} scroll-mt-20`}>
-            <div className={`${container} grid items-center gap-10 md:gap-16 ${aboutImage ? "md:grid-cols-2" : ""}`}>
-              <div className={aboutImage ? "" : "mx-auto max-w-3xl text-center"}>
+            <div className={`${container} grid items-center gap-10 md:grid-cols-[1fr_1.1fr] md:gap-16 lg:gap-24`}>
+              <div className="max-w-xl">
                 <Eyebrow>About us</Eyebrow>
                 <h2 className={h2}>{sectionText(content, "about", "heading", "About us")}</h2>
                 {aboutBody ? <p className="mt-6 whitespace-pre-line text-[var(--lx-muted)]">{aboutBody}</p> : null}
+                {showPrices ? <OutlineButton href="#prices">View our services</OutlineButton> : null}
               </div>
               {aboutImage ? (
-                <img src={aboutImage} alt="" className="aspect-[4/3] w-full rounded-xl object-cover" />
+                <img src={aboutImage} alt="" className="aspect-[3/2] w-full rounded-xl object-cover shadow-[0_24px_48px_-28px_rgba(42,30,22,0.55)]" />
               ) : null}
             </div>
           </section>
