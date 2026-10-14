@@ -1,16 +1,26 @@
-import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import { BrowserFrame } from "./DeviceFrames";
+import { SitePreview } from "./SitePreview";
 
 /**
- * Template cards. Designs without a live demo yet are shown as coming soon,
- * so nobody clicks through to something that doesn't exist.
+ * Template cards. Live templates show the real template rendered with demo
+ * content; templates still being designed show a coded "coming soon" panel.
  */
-const CARDS = [
-  { name: "Hair Salon", image: "/marketing/card-salon.jpg", demo: "/demo/salon" },
-  { name: "Nail Studio", image: "/marketing/card-nails.jpg", demo: null },
-  { name: "Barbershop", image: "/marketing/card-barber.jpg", demo: "/demo/barber" },
-  { name: "Lash & Brow", image: "/marketing/card-lash.jpg", demo: null },
-] as const;
+const CARDS: { name: string; templateId: string | null }[] = [
+  { name: "Hair Salon", templateId: "salon" },
+  { name: "Nail Studio", templateId: null },
+  { name: "Barbershop", templateId: "barber" },
+  { name: "Lash & Brow", templateId: null },
+];
+
+function ComingSoonPanel({ name }: { name: string }) {
+  return (
+    <div className="flex aspect-[1280/900] flex-col items-center justify-center gap-2 bg-gradient-to-br from-petal via-[#FBEAF0] to-petal-deep p-6 text-center">
+      <span className="font-didone text-3xl leading-none">{name}</span>
+      <span className="text-sm text-mauve">In design now</span>
+    </div>
+  );
+}
 
 export function TemplateGallery() {
   return (
@@ -18,19 +28,16 @@ export function TemplateGallery() {
       {CARDS.map((card) => {
         const body = (
           <>
-            <div className="overflow-hidden rounded-t-2xl bg-petal p-2 pb-0">
-              <Image
-                src={card.image}
-                alt={`${card.name} template preview`}
-                width={293}
-                height={317}
-                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                className="h-auto w-full rounded-t-xl transition-transform duration-500 group-hover:scale-[1.02]"
-              />
-            </div>
-            <div className="mt-5 flex items-center justify-between gap-4 border-b border-plum/15 pb-4">
+            <BrowserFrame>
+              {card.templateId ? (
+                <SitePreview templateId={card.templateId} viewportWidth={1280} viewportHeight={900} />
+              ) : (
+                <ComingSoonPanel name={card.name} />
+              )}
+            </BrowserFrame>
+            <div className="mt-5 flex min-h-[3.75rem] items-center justify-between gap-4 border-b border-plum/15 pb-4">
               <span className="font-didone text-[1.75rem] leading-none tracking-[-0.01em]">{card.name}</span>
-              {card.demo ? (
+              {card.templateId ? (
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-petal text-berry transition-colors group-hover:bg-berry group-hover:text-white">
                   <ArrowRight className="size-5" aria-hidden />
                 </span>
@@ -42,12 +49,12 @@ export function TemplateGallery() {
         );
         return (
           <li key={card.name}>
-            {card.demo ? (
-              <a href={card.demo} className="group block" aria-label={`Open the ${card.name} demo`}>
+            {card.templateId ? (
+              <a href={`/demo/${card.templateId}`} className="group block" aria-label={`Open the ${card.name} demo`}>
                 {body}
               </a>
             ) : (
-              <div className="group block">{body}</div>
+              <div>{body}</div>
             )}
           </li>
         );
