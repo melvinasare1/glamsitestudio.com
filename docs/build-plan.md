@@ -49,7 +49,11 @@ Next in stage 2:
       - Upgrading from single page to full site keeps all content
 - [ ] Multi-page site routing (`/prices`, `/booking`, `/contact`) and the
       shared A/B page styles
-- [ ] Template 1 ("Luxe", hair) from the ChatGPT designs
+- [x] Template 1 "Luxe" (hair), single-page size: `apps/web/src/templates/luxe`,
+      demo at `/demo/luxe`, now the default template and the landing page preview.
+      Schema additions: hero tagline, optional review star rating
+- [ ] Luxe demo photos: about, team (3) and gallery (4+), from the photo list
+- [ ] Luxe full-site size (after the Prices, Booking and Contact A/B designs)
 - [ ] Vercel projects and environment variables, then test the full flow on
       a preview deployment
 

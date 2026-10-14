@@ -88,6 +88,114 @@ function weekHours(open: string, close: string, days: Weekday[]): OpeningHours[]
   }));
 }
 
+function luxeDemo(): SiteData {
+  const content: SiteContent = {
+    brand: { primaryColor: "#2a1e16", accentColor: "#d4af7c", font: "elegant" },
+    hero: {
+      tagline: "Premium hair salon · London",
+      headline: "Healthy hair, confident you",
+      subheadline: "Silk presses, braids, colour, wigs and more. Expert care for textured hair.",
+      image: "/templates/luxe/hero.webp",
+      ctaLabel: "Book now",
+    },
+    about: {
+      heading: "More than a salon",
+      body:
+        "Luxe Hair Studio is a London salon specialising in textured hair. We create beautiful, healthy hair through expert technique, quality products and a premium salon experience, so you leave feeling like the best version of yourself.",
+    },
+    services: { heading: "Price list", intro: "Prices include a consultation. Longer or thicker hair may cost more." },
+    team: { heading: "Meet the team" },
+    gallery: { heading: "Our work", images: [] },
+    reviews: {
+      heading: "Real results, real people",
+      items: [
+        {
+          quote: "The best salon in London! My silk press always looks amazing and lasts for weeks.",
+          name: "Jessica R.",
+          source: "Google",
+          rating: "5",
+        },
+        {
+          quote: "Professional, friendly and incredible results. I always leave feeling so confident.",
+          name: "Monique T.",
+          source: "Google",
+          rating: "5",
+        },
+        {
+          quote: "Amazing braids and such a beautiful salon. Highly recommend Luxe!",
+          name: "Danielle K.",
+          source: "Instagram",
+          rating: "5",
+        },
+      ],
+    },
+    faqs: {
+      heading: "Your questions answered",
+      items: [
+        {
+          question: "How do I book an appointment?",
+          answer: "Tap any Book now button to choose your service and a time that suits you.",
+        },
+        {
+          question: "What hair types do you work with?",
+          answer: "All of them. We specialise in natural, relaxed and textured hair, from 3A to 4C.",
+        },
+        {
+          question: "Do you provide hair for braids and wigs?",
+          answer: "Yes. Braiding hair is included in our braid prices. Wig units can be bought in salon or you can bring your own.",
+        },
+        {
+          question: "What is your cancellation policy?",
+          answer: "Please give us 48 hours' notice to cancel or move your appointment. Late cancellations may lose their deposit.",
+        },
+      ],
+    },
+    visit: { heading: "Visit us", directions: "Five minutes from Seven Sisters station.", showMap: true },
+    contact: {
+      heading: "Get in touch",
+      showForm: false,
+      instagram: "https://instagram.com/",
+      tiktok: "https://tiktok.com/",
+      facebook: "https://facebook.com/",
+      whatsapp: "+44 7700 900123",
+    },
+    booking: {
+      heading: "Ready for your next look?",
+      body: "Book your appointment today and experience the Luxe difference.",
+      ctaLabel: "Book now",
+    },
+    seo: { description: "Premium hair salon in London for textured hair: silk presses, braids, colour and wigs." },
+  };
+  const data: SiteData = {
+    business: demoBusiness("luxe", "Luxe Hair Studio", content),
+    categories: [
+      category("c1", "Styling", 0),
+      category("c2", "Braids", 1),
+      category("c3", "Colour", 2),
+      category("c4", "Wigs & installs", 3),
+      category("c5", "Treatments", 4),
+    ],
+    services: [
+      service("s1", "c1", "Silk press", 90, 6500, 0),
+      service("s2", "c1", "Wash & blow dry", 60, 4000, 1),
+      service("s3", "c2", "Knotless braids", 240, 12000, 0, { priceIsFrom: true }),
+      service("s4", "c2", "Box braids", 240, 11000, 1, { priceIsFrom: true }),
+      service("s5", "c3", "Full colour", 120, 9500, 0, { priceIsFrom: true }),
+      service("s6", "c4", "Wig install", 120, 8500, 0),
+      service("s7", "c5", "Deep conditioning treatment", 30, 3000, 0),
+    ],
+    staff: [
+      person("p1", "Ama", "Founder & stylist", "Passionate about healthy hair and creating styles that make you feel confident.", 0),
+      person("p2", "Esi", "Braider", "Specialising in knotless braids, protective styles and natural hair care.", 1),
+      person("p3", "Nia", "Colourist", "Expert in colour, custom treatments and hair transformations.", 2),
+    ],
+    hours: [...weekHours("09:00", "19:00", [1, 2, 3, 4]), ...weekHours("09:00", "17:00", [5])],
+  };
+  data.business.address = { line1: "123 High Road", line2: "", city: "London", postcode: "N15 4AB", country: "GB" };
+  data.business.email = "hello@luxehair.example";
+  return data;
+}
+
 function salonDemo(): SiteData {
   const content: SiteContent = {
     brand: { primaryColor: "#3d2b24", accentColor: "#f4ece6", font: "elegant" },
@@ -193,6 +301,7 @@ function barberDemo(): SiteData {
 }
 
 const DEMOS: Record<string, () => SiteData> = {
+  luxe: luxeDemo,
   salon: salonDemo,
   barber: barberDemo,
 };

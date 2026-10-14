@@ -31,17 +31,46 @@ const FONT_STACKS: Record<string, { heading: string; body: string }> = {
   },
 };
 
+export type BrandFont = "elegant" | "modern" | "soft";
+
+/** The owner's colours, or the template's own when they haven't picked any. */
+export function brandColors(business: Business, defaults: { primary: string; accent: string }) {
+  const stored = business.content.brand ?? {};
+  const pick = (value: unknown, fallback: string) =>
+    typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  return { primary: pick(stored.primaryColor, defaults.primary), accent: pick(stored.accentColor, defaults.accent) };
+}
+
+export function brandFont(business: Business): BrandFont {
+  const value = sectionText(business.content, "brand", "font", "elegant");
+  return value === "modern" || value === "soft" ? value : "elegant";
+}
+
+/** Dark or light text, whichever reads better on a #rrggbb background. */
+export function inkOn(hex: string, dark = "#1f1f1f", light = "#ffffff"): string {
+  const channel = (start: number) => {
+    const c = parseInt(hex.slice(start, start + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  // Contrast against white vs against near-black.
+  return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.0636 ? light : dark;
+}
+
 /** CSS variables a template can use for the owner's brand colours and fonts. */
 export function brandStyle(business: Business): React.CSSProperties {
-  const content = business.content;
-  const fonts = FONT_STACKS[sectionText(content, "brand", "font", "elegant")] ?? FONT_STACKS.elegant;
+  const fonts = FONT_STACKS[brandFont(business)];
+  const colors = brandColors(business, { primary: "#1f1a17", accent: "#f3ebe4" });
   return {
-    "--brand": sectionText(content, "brand", "primaryColor", "#1f1a17"),
-    "--accent": sectionText(content, "brand", "accentColor", "#f3ebe4"),
+    "--brand": colors.primary,
+    "--accent": colors.accent,
     "--font-heading": fonts.heading,
     "--font-copy": fonts.body,
   } as React.CSSProperties;
 }
+
+/** Rounded font stack for the "soft" brand font, shared by every template. */
+export const SOFT_FONT_STACK = FONT_STACKS.soft.heading;
 
 /** Google Maps embed for an address, without an API key. */
 export function mapEmbedUrl(address: string): string {

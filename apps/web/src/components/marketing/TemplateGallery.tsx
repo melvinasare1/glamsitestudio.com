@@ -7,7 +7,7 @@ import { SitePreview } from "./SitePreview";
  * content; templates still being designed show a coded "coming soon" panel.
  */
 const CARDS: { name: string; templateId: string | null }[] = [
-  { name: "Hair Salon", templateId: "salon" },
+  { name: "Luxe", templateId: "luxe" },
   { name: "Nail Studio", templateId: null },
   { name: "Barbershop", templateId: "barber" },
   { name: "Lash & Brow", templateId: null },

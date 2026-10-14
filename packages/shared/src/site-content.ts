@@ -84,6 +84,21 @@ export const FONT_OPTIONS: SelectOption[] = [
   { value: "soft", label: "Soft (rounded)" },
 ];
 
+export const REVIEW_RATING_OPTIONS: SelectOption[] = [
+  { value: "none", label: "No stars" },
+  { value: "5", label: "5 stars" },
+  { value: "4", label: "4 stars" },
+  { value: "3", label: "3 stars" },
+  { value: "2", label: "2 stars" },
+  { value: "1", label: "1 star" },
+];
+
+/** A review's star rating (1–5), or null when the owner didn't add one. */
+export function reviewRating(item: ListItem): number | null {
+  const value = Number(item.rating);
+  return Number.isInteger(value) && value >= 1 && value <= 5 ? value : null;
+}
+
 export const SITE_SECTIONS: SectionDefinition[] = [
   {
     key: "brand",
@@ -126,6 +141,14 @@ export const SITE_SECTIONS: SectionDefinition[] = [
     description: "The first thing visitors see: a headline, a line underneath and a big photo.",
     fields: [
       SHOW,
+      {
+        key: "tagline",
+        label: "Small line above the headline",
+        type: "text",
+        description: "Optional. Some templates show it in small capitals.",
+        placeholder: "e.g. Premium hair salon · London",
+        maxLength: 60,
+      },
       {
         key: "headline",
         label: "Headline",
@@ -238,6 +261,14 @@ export const SITE_SECTIONS: SectionDefinition[] = [
             type: "text",
             placeholder: "e.g. Google",
             maxLength: 40,
+          },
+          {
+            key: "rating",
+            label: "Star rating",
+            type: "select",
+            description: "Only add stars the client actually gave.",
+            options: REVIEW_RATING_OPTIONS,
+            defaultValue: "none",
           },
         ],
       },

@@ -21,6 +21,13 @@ const ALL_PAGE_SECTIONS = SECTION_KEYS.filter((key) => key !== "brand" && key !=
 
 export const TEMPLATES: TemplateDefinition[] = [
   {
+    id: "luxe",
+    name: "Luxe",
+    tagline: "Premium hair salon, made for textured hair.",
+    // Single page: contact, hours and map share one block near the end.
+    sections: ["hero", "about", "services", "team", "gallery", "reviews", "faqs", "contact", "visit", "booking"],
+  },
+  {
     id: "salon",
     name: "Salon",
     tagline: "For hair salons and stylists.",
@@ -34,7 +41,7 @@ export const TEMPLATES: TemplateDefinition[] = [
   },
 ];
 
-export const DEFAULT_TEMPLATE_ID = "salon";
+export const DEFAULT_TEMPLATE_ID = "luxe";
 
 export function getTemplate(id: string | null | undefined): TemplateDefinition {
   return TEMPLATES.find((template) => template.id === id) ?? TEMPLATES[0];

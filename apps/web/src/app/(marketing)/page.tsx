@@ -105,7 +105,7 @@ export default function HomePage() {
         </div>
         <div className="mx-auto max-w-[82rem] px-5 pb-16 md:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:flex lg:w-[50%] lg:items-center lg:px-0 lg:pb-0 lg:pr-8">
           <DesktopFrame label="The Salon template on a desktop screen, with demo content">
-            <SitePreview templateId="salon" viewportWidth={1280} viewportHeight={800} />
+            <SitePreview templateId="luxe" viewportWidth={1280} viewportHeight={800} />
           </DesktopFrame>
         </div>
       </section>
