@@ -1,5 +1,13 @@
-# Dependencies
-node_modules/
-
-# Turbo
-.turbo/
+node_modules
+.next
+out
+.env.local
+.env*.local
+.DS_Store
+*.log
+.turbo
+service-account.json
+*-firebase-adminsdk-*.json
+.env
+.vercel
+*.tsbuildinfo
