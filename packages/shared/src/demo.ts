@@ -100,6 +100,7 @@ function luxeDemo(): SiteData {
     },
     about: {
       heading: "More than a salon",
+      image: "/templates/luxe/about.webp",
       body:
         "Luxe Hair Studio is a London salon specialising in textured hair. We create beautiful, healthy hair through expert technique, quality products and a premium salon experience, so you leave feeling like the best version of yourself.",
     },
