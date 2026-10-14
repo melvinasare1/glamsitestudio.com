@@ -39,8 +39,17 @@ Done on 13–14 Oct 2026:
 
 Next in stage 2:
 
-- [ ] Design and build the Salon and Barber templates (replace the starter
-      layout in `apps/web/src/templates`)
+- [ ] Template lineup: 6 designs (3 hair, 2 nails, 1 spa), designed with
+      ChatGPT one at a time. Every design comes in two sizes:
+      - Single page ($27): the home page with compact prices, contact,
+        hours and map; Book buttons go to the owner's booking link
+      - Full site ($47, premium $97): Home, Prices, Booking, Contact
+      - Prices, Booking and Contact pages each have two shared layout styles
+        (A and B), used by every template; each template picks its styles
+      - Upgrading from single page to full site keeps all content
+- [ ] Multi-page site routing (`/prices`, `/booking`, `/contact`) and the
+      shared A/B page styles
+- [ ] Template 1 ("Luxe", hair) from the ChatGPT designs
 - [ ] Vercel projects and environment variables, then test the full flow on
       a preview deployment
 
@@ -48,7 +57,8 @@ Next in stage 2:
 
 - [ ] glamsitestudio.com marketing pages: template gallery, live demos,
       pricing, FAQ
-- [ ] Stripe products: five template prices ($27 to $97, one-off),
+- [ ] Stripe products: single page ($27), full site ($47), premium full
+      site ($97), upgrade (the difference), all one-off;
       done-for-you setup ($299, one-off), hosting ($15/month or $150/year),
       booking add-on (about $24/month)
 - [ ] First-month hosting for $1: a Stripe coupon for $14 off, applied once
