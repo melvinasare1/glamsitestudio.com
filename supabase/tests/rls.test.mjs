@@ -70,6 +70,11 @@ insert into public.businesses (id, owner_id, name, slug, status) values
   ('10000000-0000-0000-0000-00000000000b', '${B}', 'Salon B', 'salon-b', 'draft');
 insert into public.business_billing (business_id) values
   ('10000000-0000-0000-0000-00000000000a'), ('10000000-0000-0000-0000-00000000000b');
+insert into public.email_notification_settings (business_id) values
+  ('10000000-0000-0000-0000-00000000000a'), ('10000000-0000-0000-0000-00000000000b');
+insert into public.email_usage (business_id, year_month, sent_count) values
+  ('10000000-0000-0000-0000-00000000000a', '2026-11', 5),
+  ('10000000-0000-0000-0000-00000000000b', '2026-11', 3);
 insert into public.services (id, business_id, name, duration_minutes, price_cents, is_visible) values
   ('20000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000a', 'Cut', 60, 4500, true),
   ('20000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', 'Secret', 30, 100, false),
@@ -91,6 +96,8 @@ await as("anon", null, async () => {
   const s = await db.query("select name from public.services order by name");
   check("anon sees only visible services of live businesses", s.rows.map((r) => r.name).join() === "Cut", s.rows.map((r) => r.name).join());
   check("anon cannot read billing", Boolean(await rejects(() => db.query("select * from public.business_billing"))));
+  check("anon cannot read email_usage", Boolean(await rejects(() => db.query("select * from public.email_usage"))));
+  check("anon cannot read email_notification_settings", Boolean(await rejects(() => db.query("select * from public.email_notification_settings"))));
   check("anon cannot read clients", Boolean(await rejects(() => db.query("select * from public.clients"))));
   check("anon cannot read appointments", Boolean(await rejects(() => db.query("select * from public.appointments"))));
   check("anon cannot insert enquiries", Boolean(await rejects(() => db.query(
@@ -104,6 +111,15 @@ await as("authenticated", B, async () => {
   check("owner B sees live A and own draft B", b.rows.map((r) => r.slug).join() === "salon-a,salon-b", b.rows.map((r) => r.slug).join());
   const billing = await db.query("select business_id from public.business_billing");
   check("owner B reads only own billing", billing.rows.length === 1 && billing.rows[0].business_id.endsWith("b"));
+  const emailUsage = await db.query("select business_id from public.email_usage");
+  check("owner B reads only own email_usage", emailUsage.rows.length === 1 && emailUsage.rows[0].business_id.endsWith("b"));
+  const emailSettings = await db.query("select business_id from public.email_notification_settings");
+  check("owner B reads only own email_notification_settings", emailSettings.rows.length === 1 && emailSettings.rows[0].business_id.endsWith("b"));
+  check("owner B cannot write email_usage directly", Boolean(await rejects(() => db.query("update public.email_usage set sent_count = 999"))));
+  // RLS allows this; tier-gating happens at the app layer, intentionally not enforced here.
+  const settingsUpdate = await db.query(
+    "update public.email_notification_settings set client_booking_confirmation_enabled = false where business_id = '10000000-0000-0000-0000-00000000000b'");
+  check("owner B can write own email_notification_settings", settingsUpdate.affectedRows === 1);
   const clients = await db.query("select * from public.clients");
   check("owner B cannot see A's clients", clients.rows.length === 0);
   const appts = await db.query("select * from public.appointments");

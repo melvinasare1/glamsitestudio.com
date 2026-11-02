@@ -121,6 +121,22 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
   return done();
 }
 
+/** Owner collected a deposit/payment in person (cash, card machine, phone) rather than online. */
+export async function markDepositPaid(id: string): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+  const { supabase, business } = ctx;
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({ deposit_status: "paid" })
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .in("deposit_status", ["none", "pending"]);
+  if (error) return dbError("update deposit status", error);
+  return done();
+}
+
 export async function saveInternalNotes(id: string, notes: string): Promise<ActionResult> {
   const ctx = await ownerContext();
   if (!ctx.ok) return ctx;

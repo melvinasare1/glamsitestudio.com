@@ -1,4 +1,4 @@
-import { categoryFromRow, serviceFromRow } from "@glamsite/shared/mappers";
+import { categoryFromRow, serviceFromRow, staffFromRow } from "@glamsite/shared/mappers";
 import { createClient } from "@glamsite/shared/supabase/server";
 import { PageBody, PageHeader } from "@/components/page";
 import { requireBusiness } from "@/lib/business";
@@ -9,9 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function ServicesPage() {
   const { business } = await requireBusiness();
   const supabase = await createClient();
-  const [categories, services] = await Promise.all([
+  const [categories, services, staff] = await Promise.all([
     supabase.from("service_categories").select("*").eq("business_id", business.id).order("position"),
     supabase.from("services").select("*").eq("business_id", business.id).order("position"),
+    supabase.from("staff").select("*, staff_services(service_id)").eq("business_id", business.id).order("position"),
   ]);
 
   return (
@@ -22,8 +23,10 @@ export default async function ServicesPage() {
       />
       <PageBody>
         <ServicesManager
+          businessId={business.id}
           categories={(categories.data ?? []).map(categoryFromRow)}
           services={(services.data ?? []).map(serviceFromRow)}
+          staff={(staff.data ?? []).map(staffFromRow)}
           currency={business.currency}
         />
       </PageBody>

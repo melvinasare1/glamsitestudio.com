@@ -12,13 +12,18 @@ import type {
   BookingMode,
   BusinessStatus,
   DepositStatus,
+  EmailNotificationSettings,
+  EmailUsage,
   Enquiry,
+  HostingTier,
   OpeningHours,
   Service,
   ServiceCategory,
   StaffMember,
   StaffWorkingHours,
   SubscriptionStatus,
+  Template,
+  TemplatePriceTier,
   TimeOff,
   Weekday,
 } from "./types";
@@ -75,7 +80,8 @@ export function businessFromRow(row: Row): Business {
 export function billingFromRow(row: Row): BusinessBilling {
   return {
     businessId: str(row.business_id),
-    plan: oneOf(row.plan, ["diy", "done_for_you"] as const, "diy"),
+    designService: oneOf(row.design_service, ["diy", "done_for_you"] as const, "diy"),
+    hostingTier: oneOf<HostingTier>(row.hosting_tier, ["basic", "popular", "premium"], "basic"),
     subscriptionStatus: oneOf<SubscriptionStatus>(
       row.subscription_status,
       ["none", "trialing", "active", "past_due", "canceled", "unpaid", "incomplete"],
@@ -83,6 +89,41 @@ export function billingFromRow(row: Row): BusinessBilling {
     ),
     bookingAddon: bool(row.booking_addon),
     currentPeriodEnd: strOrNull(row.current_period_end),
+    stripeCustomerId: strOrNull(row.stripe_customer_id),
+    stripeSubscriptionId: strOrNull(row.stripe_subscription_id),
+    stripeConnectAccountId: strOrNull(row.stripe_connect_account_id),
+    stripeConnectChargesEnabled: bool(row.stripe_connect_charges_enabled),
+  };
+}
+
+export function emailNotificationSettingsFromRow(row: Row): EmailNotificationSettings {
+  return {
+    businessId: str(row.business_id),
+    clientBookingConfirmationEnabled: bool(row.client_booking_confirmation_enabled, true),
+    ownerBookingConfirmationEnabled: bool(row.owner_booking_confirmation_enabled, true),
+    clientCancellationEnabled: bool(row.client_cancellation_enabled, true),
+    ownerCancellationEnabled: bool(row.owner_cancellation_enabled, true),
+  };
+}
+
+export function emailUsageFromRow(row: Row): EmailUsage {
+  return {
+    businessId: str(row.business_id),
+    yearMonth: str(row.year_month),
+    sentCount: int(row.sent_count),
+  };
+}
+
+export function templateFromRow(row: Row): Template {
+  return {
+    id: str(row.id),
+    name: str(row.name),
+    priceCents: intOrNull(row.price_cents),
+    priceTier: row.price_tier === "single_page" || row.price_tier === "regular" || row.price_tier === "luxe"
+      ? (row.price_tier as TemplatePriceTier)
+      : null,
+    isActive: bool(row.is_active, true),
+    position: int(row.position),
   };
 }
 
@@ -110,6 +151,7 @@ export function serviceFromRow(row: Row): Service {
     isVisible: bool(row.is_visible, true),
     isBookable: bool(row.is_bookable, true),
     position: int(row.position),
+    imageUrl: str(row.image_url),
   };
 }
 

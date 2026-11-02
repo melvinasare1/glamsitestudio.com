@@ -1,8 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { SLOT_INTERVALS, addDays, isYmd, minutesOfDay, safeTimeZone, zonedTimeToInstant } from "@glamsite/shared/booking";
+import {
+  SLOT_INTERVALS,
+  addDays,
+  isYmd,
+  minutesOfDay,
+  safeTimeZone,
+  zonedTimeToInstant,
+  type PaymentPolicy,
+} from "@glamsite/shared/booking";
 import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
+import { parsePrice } from "@/lib/order";
 import { weeklySlotsProblem, type WeeklySlot } from "@/lib/weekly-hours";
 
 type Mode = "none" | "link" | "glamsite";
@@ -43,10 +52,14 @@ export type RulesInput = {
   maxAdvanceDays: number;
   cancellationNoticeHours: number;
   autoConfirm: boolean;
+  paymentPolicy: PaymentPolicy;
+  /** As entered by the owner, e.g. "10" for £10. Only used when paymentPolicy is "deposit_fixed". */
+  depositFixedAmount: string;
   policyText: string;
 };
 
 const inRange = (value: number, min: number, max: number) => Number.isInteger(value) && value >= min && value <= max;
+const PAYMENT_POLICIES: readonly PaymentPolicy[] = ["none", "full", "deposit_50", "deposit_fixed"];
 
 export async function saveBookingRules(input: RulesInput): Promise<ActionResult> {
   const ctx = await ownerContext();
@@ -56,6 +69,14 @@ export async function saveBookingRules(input: RulesInput): Promise<ActionResult>
   if (!inRange(input.minNoticeMinutes, 0, 20160)) return fail("Choose how much notice you need.");
   if (!inRange(input.maxAdvanceDays, 1, 365)) return fail("Choose how far ahead clients can book.");
   if (!inRange(input.cancellationNoticeHours, 0, 336)) return fail("Choose the cancellation cut-off.");
+  if (!PAYMENT_POLICIES.includes(input.paymentPolicy)) return fail("Choose how clients pay.");
+
+  let depositFixedCents: number | null = null;
+  if (input.paymentPolicy === "deposit_fixed") {
+    const price = parsePrice(input.depositFixedAmount);
+    if (!price.ok || price.cents == null) return fail("Enter the deposit amount, like 10 or 10.50.");
+    depositFixedCents = price.cents;
+  }
 
   const { error } = await ctx.supabase.from("booking_settings").upsert(
     {
@@ -65,6 +86,8 @@ export async function saveBookingRules(input: RulesInput): Promise<ActionResult>
       max_advance_days: input.maxAdvanceDays,
       cancellation_notice_hours: input.cancellationNoticeHours,
       auto_confirm: input.autoConfirm,
+      payment_policy: input.paymentPolicy,
+      deposit_fixed_cents: depositFixedCents,
       policy_text: input.policyText.trim().slice(0, 2000),
     },
     { onConflict: "business_id" }

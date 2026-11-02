@@ -93,7 +93,7 @@ export default async function BookingPage() {
             </ul>
           </Panel>
         ) : null}
-        <RulesForm rules={bookingRulesFromRow(settings.data)} />
+        <RulesForm rules={bookingRulesFromRow(settings.data)} currency={business.currency} />
         <StaffHours staff={team} workingHours={workingHours} openingHours={openingHours} />
         <TimeOffPanel timeOff={(timeOff.data ?? []).map(timeOffFromRow)} staff={team} timeZone={safeTimeZone(business.timezone)} />
         <BookingForm business={business} />

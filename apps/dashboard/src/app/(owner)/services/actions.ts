@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
+import { dbError, fail, ownerContext, type ActionResult, type ServerClient } from "@/lib/business";
 import { moveRow, parsePrice } from "@/lib/order";
 
 export type ServiceInput = {
@@ -15,12 +15,53 @@ export type ServiceInput = {
   bufferMinutes: number;
   isVisible: boolean;
   isBookable: boolean;
+  imageUrl: string;
+  /** Who can take this service. Empty = anyone on the team (see staffForService). */
+  staffIds: string[];
 };
 
 const done = (): ActionResult => {
   revalidatePath("/services");
+  revalidatePath("/team");
   return { ok: true };
 };
+
+/** Mirrors the sync in team/actions.ts, keyed by service instead of staff member. */
+async function syncServiceStaff(
+  supabase: ServerClient,
+  businessId: string,
+  serviceId: string,
+  staffIds: string[]
+): Promise<ActionResult | null> {
+  const wanted = new Set(staffIds);
+  const { data: links, error: linksError } = await supabase
+    .from("staff_services")
+    .select("staff_id")
+    .eq("service_id", serviceId)
+    .eq("business_id", businessId);
+  if (linksError) return dbError("list service staff", linksError);
+
+  const current = new Set((links ?? []).map((link) => link.staff_id as string));
+  const toRemove = [...current].filter((id) => !wanted.has(id));
+  const toAdd = [...wanted].filter((id) => !current.has(id));
+
+  if (toRemove.length) {
+    const { error } = await supabase
+      .from("staff_services")
+      .delete()
+      .eq("service_id", serviceId)
+      .eq("business_id", businessId)
+      .in("staff_id", toRemove);
+    if (error) return dbError("remove service staff", error);
+  }
+  if (toAdd.length) {
+    const { error } = await supabase
+      .from("staff_services")
+      .insert(toAdd.map((staffId) => ({ business_id: businessId, staff_id: staffId, service_id: serviceId })));
+    if (error) return dbError("add service staff", error);
+  }
+  return null;
+}
 
 export async function saveService(input: ServiceInput): Promise<ActionResult> {
   const ctx = await ownerContext();
@@ -45,21 +86,29 @@ export async function saveService(input: ServiceInput): Promise<ActionResult> {
     buffer_minutes: buffer,
     is_visible: input.isVisible,
     is_bookable: input.isBookable,
+    image_url: input.imageUrl.trim().slice(0, 2000),
   };
 
-  if (input.id) {
-    const { error } = await ctx.supabase.from("services").update(row).eq("id", input.id).eq("business_id", ctx.business.id);
-    return error ? dbError("update service", error) : done();
+  let serviceId = input.id;
+  if (serviceId) {
+    const { error } = await ctx.supabase.from("services").update(row).eq("id", serviceId).eq("business_id", ctx.business.id);
+    if (error) return dbError("update service", error);
+  } else {
+    const { count } = await ctx.supabase
+      .from("services")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", ctx.business.id);
+    const { data, error } = await ctx.supabase
+      .from("services")
+      .insert({ ...row, business_id: ctx.business.id, position: count ?? 0 })
+      .select("id")
+      .single();
+    if (error || !data) return dbError("insert service", error);
+    serviceId = data.id as string;
   }
 
-  const { count } = await ctx.supabase
-    .from("services")
-    .select("id", { count: "exact", head: true })
-    .eq("business_id", ctx.business.id);
-  const { error } = await ctx.supabase
-    .from("services")
-    .insert({ ...row, business_id: ctx.business.id, position: count ?? 0 });
-  return error ? dbError("insert service", error) : done();
+  const syncError = await syncServiceStaff(ctx.supabase, ctx.business.id, serviceId, input.staffIds);
+  return syncError ?? done();
 }
 
 export async function deleteService(id: string): Promise<ActionResult> {

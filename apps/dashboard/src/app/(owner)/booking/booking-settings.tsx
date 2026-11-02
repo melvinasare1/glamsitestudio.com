@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { formatClock, formatDayShort, todayIn, zonedParts, type BookingRules } from "@glamsite/shared/booking";
+import { formatClock, formatDayShort, todayIn, zonedParts, type BookingRules, type PaymentPolicy } from "@glamsite/shared/booking";
 import { WEEKDAYS, formatTime } from "@glamsite/shared/format";
 import type { OpeningHours, StaffMember, StaffWorkingHours, TimeOff } from "@glamsite/shared/types";
 import { EmptyState, Field, Panel } from "@/components/page";
@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { WeeklyHoursFields, daysFromSlots, slotsFromDays, type Day } from "@/components/weekly-hours";
+import { centsToInput } from "@/lib/order";
 import { useAction } from "@/lib/use-action";
 import {
   addTimeOff,
@@ -23,6 +24,13 @@ import {
   type RulesInput,
   type TimeOffInput,
 } from "./actions";
+
+const PAYMENT_POLICIES: { value: PaymentPolicy; label: string }[] = [
+  { value: "none", label: "No payment required" },
+  { value: "full", label: "Full payment" },
+  { value: "deposit_50", label: "50% deposit" },
+  { value: "deposit_fixed", label: "Fixed deposit" },
+];
 
 // ---------------------------------------------------------------------------
 // Rules
@@ -90,14 +98,17 @@ function NumberSelect({
   );
 }
 
-export function RulesForm({ rules }: { rules: BookingRules }) {
+export function RulesForm({ rules, currency }: { rules: BookingRules; currency: string }) {
   const { pending, run } = useAction();
+  const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
   const [form, setForm] = useState<RulesInput>({
     slotIntervalMinutes: rules.slotIntervalMinutes,
     minNoticeMinutes: rules.minNoticeMinutes,
     maxAdvanceDays: rules.maxAdvanceDays,
     cancellationNoticeHours: rules.cancellationNoticeHours,
     autoConfirm: rules.autoConfirm,
+    paymentPolicy: rules.paymentPolicy,
+    depositFixedAmount: centsToInput(rules.depositFixedCents),
     policyText: rules.policyText,
   });
   const set = <K extends keyof RulesInput>(key: K, value: RulesInput[K]) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -141,6 +152,22 @@ export function RulesForm({ rules }: { rules: BookingRules }) {
           </span>
           <Switch checked={form.autoConfirm} onCheckedChange={(checked) => set("autoConfirm", checked)} />
         </label>
+        <Field id="r-payment" label="How clients pay" description="Shown to clients when they book. Taking the payment itself isn't set up yet — you'll need to follow up to collect it.">
+          <Select value={form.paymentPolicy} onValueChange={(value) => set("paymentPolicy", value as PaymentPolicy)}>
+            <SelectTrigger id="r-payment" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PAYMENT_POLICIES.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        {form.paymentPolicy === "deposit_fixed" ? (
+          <Field id="r-deposit-amount" label={`Deposit amount (${symbol})`}>
+            <Input id="r-deposit-amount" inputMode="decimal" value={form.depositFixedAmount} placeholder="10"
+              onChange={(event) => set("depositFixedAmount", event.target.value)} className="w-32" />
+          </Field>
+        ) : null}
         <Field id="r-policy" label="Booking policy" description="Optional. Clients must tick that they agree before booking.">
           <Textarea id="r-policy" rows={4} maxLength={2000} value={form.policyText}
             placeholder="e.g. Please arrive 10 minutes early. Late arrivals may need to be shortened or rebooked."

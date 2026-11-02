@@ -59,19 +59,41 @@ Next in stage 2:
 
 ## Stage 3 · Stripe and the storefront
 
+Done 2 Nov 2026 (pricing changed from the single-page/full-site plan below to
+hosting tiers, each with an email quota, see `packages/shared/src/billing.ts`).
+Redesigned 2 Nov 2026 to remove every blocker before payment (Shopify-style):
+sign-up asks only for an email, lands straight in a fully-working dashboard,
+and payment is required for exactly one thing — launching the site:
+
 - [ ] glamsitestudio.com marketing pages: template gallery, live demos,
       pricing, FAQ
-- [ ] Stripe products: single page ($27), full site ($47), premium full
-      site ($97), upgrade (the difference), all one-off;
-      done-for-you setup ($299, one-off), hosting ($15/month or $150/year),
-      booking add-on (about $24/month)
-- [ ] First-month hosting for $1: a Stripe coupon for $14 off, applied once
-- [ ] Checkout in subscription mode: hosting is always included; the template
-      fee and optional setup fee are one-off line items
-- [ ] `checkout.session.completed` webhook creates the business and sends a
-      Supabase invite
-- [ ] Subscription webhooks keep `subscription_status` in sync
-- [ ] Billing page opens the Stripe Customer Portal
+- [x] Stripe pricing: hosting tiers Basic ($15/month, 100 emails), Popular
+      ($30/month, 500 emails, choose which emails send), Premium ($60/month,
+      1,000 emails, email campaigns); done-for-you setup ($99, one-off). No
+      products or prices created by hand — Checkout builds them inline with
+      `price_data` (`packages/shared/src/stripe.ts`)
+- [x] First-month hosting for $1: a Stripe coupon per hosting tier price,
+      duration once, auto-created on first use (`getOrCreateFirstMonthCoupon`)
+- [x] Sign-up is email-only: `startSignup` (`apps/dashboard/src/app/signup/actions.ts`)
+      creates the login and an empty draft business instantly — no Stripe
+      involved, no plan choice — and signs the owner straight into the
+      dashboard (an admin-generated magic link, redeemed server-side, so
+      there's no "check your email" step)
+- [x] Everything in the dashboard (content, services, team, hours, booking
+      settings) is open immediately, with no payment check — launching the
+      site is the only gated action
+- [x] Launch: `startLaunchCheckout` (`apps/dashboard/src/app/(owner)/billing/actions.ts`),
+      a $1-first-month Checkout session (Basic tier, subscription mode) from
+      the Overview page's `PublishPanel` or the Billing page; the
+      `checkout.session.completed` webhook's `confirmLaunch` sets
+      `subscription_status: active` and flips the business to `status: live`.
+      `setPublished()` re-checks the subscription so going live can't be
+      triggered any other way; toggling live/draft afterwards stays free
+- [x] Subscription webhooks keep `subscription_status` and
+      `current_period_end` in sync
+- [x] Billing page opens the Stripe Customer Portal
+- [ ] Upgrading hosting tier or adding done-for-you design after launch —
+      moved here from sign-up, not yet built (see `docs/follow-ups.md`)
 - [ ] Done-for-you buyers land on an intake form and launch-call link
 - [ ] Gate: 10 paying sites
 
@@ -108,18 +130,19 @@ rewritten onto this repo's own salon tables. Ternarie itself is untouched
 - [x] Dashboard Booking: rules, each person's working hours, time off and
       closures, booking policy, auto-confirm or review each booking
 
-### Phase 2 · Payments and deposits (Stripe Connect)
+### Phase 2 · Payments and deposits (Stripe Connect) (done, 2 Nov 2026)
 
-- [ ] Connect onboarding in the dashboard (Express accounts); the account id
+- [x] Connect onboarding in the dashboard (Express accounts); the account id
       goes in `business_billing.stripe_connect_account_id`
-- [ ] Per service: deposit, full payment up front, or pay at the salon
-      (`services.deposit_cents`, `booking_settings.require_deposit`)
-- [ ] Checkout on the salon's connected account; the slot is held as
+- [x] Per service: deposit, full payment up front, or pay at the salon
+      (`booking_settings.payment_policy`, `deposit_fixed_cents`)
+- [x] Checkout on the salon's connected account; the slot is held as
       "pending" for 15 minutes and released if unpaid
-- [ ] `payment_intent.succeeded` webhook confirms the appointment and sets
+- [x] `checkout.session.completed` webhook confirms the appointment and sets
       `deposit_status`
-- [ ] Owner records in-salon payments; appointment shows paid, deposit, due
-- [ ] Decide our platform fee per booking, if any
+- [x] Owner records in-salon payments; appointment shows paid, deposit, due
+- [x] Decide our platform fee per booking, if any — 1% via
+      `PLATFORM_FEE_BPS`, Stripe's `application_fee_amount`
 
 ### Phase 3 · Refunds and no-show rules
 

@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 type Step = { done: boolean; title: string; body: string; href: string; essential: boolean };
 
 export default async function OverviewPage() {
-  const { business } = await requireBusiness();
+  const { session, business } = await requireBusiness();
+  const launched = session.billing?.subscriptionStatus === "active" || session.billing?.subscriptionStatus === "trialing";
   const supabase = await createClient();
   const count = async (table: "services" | "staff" | "opening_hours") =>
     (await supabase.from(table).select("id", { count: "exact", head: true }).eq("business_id", business.id)).count ?? 0;
@@ -78,7 +79,7 @@ export default async function OverviewPage() {
     <>
       <PageHeader title={`Welcome, ${business.name}`} />
       <PageBody>
-        <PublishPanel ready={ready} />
+        <PublishPanel ready={ready} launched={launched} />
 
         <Panel title="Set up your site" description={`${doneCount} of ${steps.length} done`}>
           <ul className="grid gap-1">
@@ -100,6 +101,17 @@ export default async function OverviewPage() {
               </li>
             ))}
           </ul>
+        </Panel>
+
+        <Panel title="Your account manager">
+          <p className="text-sm text-muted-foreground">
+            Connecting a domain, importing your price list, or anything else slowing you down — your dedicated
+            account manager is here to help you get set up and keep your site running smoothly.{" "}
+            <Link href="/support" className="font-medium text-brand underline-offset-4 hover:underline">
+              Get in touch
+            </Link>
+            .
+          </p>
         </Panel>
 
         <Panel

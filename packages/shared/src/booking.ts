@@ -17,6 +17,14 @@ import type { AppointmentStatus } from "./types";
 // Rules (the booking_settings row, with defaults when there isn't one yet)
 // ---------------------------------------------------------------------------
 
+/**
+ * How clients are told to pay when booking online. Informational only for
+ * now — there's no Stripe Connect integration yet, so nothing is actually
+ * charged. "full" and "deposit_50" are worked out from the service price;
+ * "deposit_fixed" uses depositFixedCents.
+ */
+export type PaymentPolicy = "none" | "full" | "deposit_50" | "deposit_fixed";
+
 export type BookingRules = {
   slotIntervalMinutes: number;
   /** How soon the next bookable time can be, e.g. 120 = not within 2 hours. */
@@ -28,6 +36,9 @@ export type BookingRules = {
   /** false = online bookings arrive as "pending" for the owner to confirm. */
   autoConfirm: boolean;
   requireDeposit: boolean;
+  paymentPolicy: PaymentPolicy;
+  /** Only set (and used) when paymentPolicy is "deposit_fixed". */
+  depositFixedCents: number | null;
   /** Shown to clients before they book. */
   policyText: string;
 };
@@ -39,6 +50,8 @@ export const DEFAULT_BOOKING_RULES: BookingRules = {
   cancellationNoticeHours: 24,
   autoConfirm: true,
   requireDeposit: false,
+  paymentPolicy: "none",
+  depositFixedCents: null,
   policyText: "",
 };
 
@@ -50,6 +63,8 @@ function num(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
 }
 
+const PAYMENT_POLICIES: readonly PaymentPolicy[] = ["none", "full", "deposit_50", "deposit_fixed"];
+
 export function bookingRulesFromRow(row: Row | null | undefined): BookingRules {
   if (!row) return { ...DEFAULT_BOOKING_RULES };
   const d = DEFAULT_BOOKING_RULES;
@@ -60,8 +75,31 @@ export function bookingRulesFromRow(row: Row | null | undefined): BookingRules {
     cancellationNoticeHours: num(row.cancellation_notice_hours, d.cancellationNoticeHours),
     autoConfirm: typeof row.auto_confirm === "boolean" ? row.auto_confirm : d.autoConfirm,
     requireDeposit: typeof row.require_deposit === "boolean" ? row.require_deposit : d.requireDeposit,
+    paymentPolicy:
+      typeof row.payment_policy === "string" && (PAYMENT_POLICIES as string[]).includes(row.payment_policy)
+        ? (row.payment_policy as PaymentPolicy)
+        : d.paymentPolicy,
+    depositFixedCents:
+      typeof row.deposit_fixed_cents === "number" && Number.isFinite(row.deposit_fixed_cents)
+        ? Math.trunc(row.deposit_fixed_cents)
+        : null,
     policyText: typeof row.policy_text === "string" ? row.policy_text : d.policyText,
   };
+}
+
+/**
+ * How much of a service's price the client is told to pay, given the
+ * business's payment policy. Null means nothing is due at booking.
+ */
+export function depositAmountCents(
+  policy: PaymentPolicy,
+  priceCents: number | null,
+  depositFixedCents: number | null
+): number | null {
+  if (policy === "full") return priceCents;
+  if (policy === "deposit_50") return priceCents == null ? null : Math.round(priceCents / 2);
+  if (policy === "deposit_fixed") return depositFixedCents;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
