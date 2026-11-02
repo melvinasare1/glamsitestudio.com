@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { formatDuration, formatServicePrice, groupServices } from "@glamsite/shared/format";
-import type { Service, ServiceCategory } from "@glamsite/shared/types";
+import type { Service, ServiceCategory, StaffMember } from "@glamsite/shared/types";
 import { ImageInput } from "@/components/editor/image-input";
 import { EmptyState, Field, Panel } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +30,17 @@ import {
 const DURATIONS = [10, 15, 20, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240, 300, 360, 420, 480];
 const NO_CATEGORY = "none";
 
-type Draft = Omit<ServiceInput, "durationMinutes" | "bufferMinutes"> & { durationMinutes: string; bufferMinutes: string };
+type Draft = Omit<ServiceInput, "durationMinutes" | "bufferMinutes" | "staffIds"> & {
+  durationMinutes: string;
+  bufferMinutes: string;
+  /** "all" skips individual picks and clears any explicit links, so new hires are included automatically. */
+  staffMode: "all" | "some";
+  staffIds: string[];
+};
 
-function toDraft(service: Service | null, categoryId: string | null): Draft {
+function toDraft(service: Service | null, categoryId: string | null, staff: StaffMember[]): Draft {
+  const linked = service ? staff.filter((person) => person.serviceIds.includes(service.id)).map((person) => person.id) : [];
+  const anyLinked = service ? staff.some((person) => person.serviceIds.includes(service.id)) : false;
   return {
     id: service?.id,
     categoryId: service ? service.categoryId : categoryId,
@@ -45,6 +53,8 @@ function toDraft(service: Service | null, categoryId: string | null): Draft {
     isVisible: service?.isVisible ?? true,
     isBookable: service?.isBookable ?? true,
     imageUrl: service?.imageUrl ?? "",
+    staffMode: anyLinked ? "some" : "all",
+    staffIds: anyLinked ? linked : staff.map((person) => person.id),
   };
 }
 
@@ -52,11 +62,13 @@ export function ServicesManager({
   businessId,
   categories,
   services,
+  staff,
   currency,
 }: {
   businessId: string;
   categories: ServiceCategory[];
   services: Service[];
+  staff: StaffMember[];
   currency: string;
 }) {
   const { pending, run } = useAction();
@@ -68,6 +80,15 @@ export function ServicesManager({
   const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+  function toggleStaff(id: string, on: boolean) {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const ids = new Set(prev.staffIds);
+      if (on) ids.add(id);
+      else ids.delete(id);
+      return { ...prev, staffIds: [...ids] };
+    });
+  }
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -78,6 +99,7 @@ export function ServicesManager({
           ...draft,
           durationMinutes: Number(draft.durationMinutes),
           bufferMinutes: Number(draft.bufferMinutes),
+          staffIds: draft.staffMode === "all" ? [] : draft.staffIds,
         }),
       draft.id ? "Service updated" : "Service added",
       () => setDraft(null)
@@ -90,7 +112,7 @@ export function ServicesManager({
         title="Price list"
         description="Shown on your site in this order. Hidden services stay here but don't appear on your site."
         actions={
-          <Button onClick={() => setDraft(toDraft(null, null))}>
+          <Button onClick={() => setDraft(toDraft(null, null, staff))}>
             <PlusIcon /> Add service
           </Button>
         }
@@ -131,7 +153,7 @@ export function ServicesManager({
                           <ArrowDownIcon />
                         </Button>
                         <Button variant="ghost" size="icon-sm" aria-label={`Edit ${service.name}`}
-                          onClick={() => setDraft(toDraft(service, null))}>
+                          onClick={() => setDraft(toDraft(service, null, staff))}>
                           <PencilIcon />
                         </Button>
                         <Button variant="ghost" size="icon-sm" aria-label={`Delete ${service.name}`} disabled={pending}
@@ -273,6 +295,26 @@ export function ServicesManager({
                   <Input id="svc-buffer" type="number" min={0} max={240} step={5} value={draft.bufferMinutes}
                     onChange={(event) => set("bufferMinutes", event.target.value)} className="w-28" />
                 </Field>
+                {staff.length > 0 ? (
+                  <Field label="Who does this service" description="Choose one person, a few, or leave everyone on to let any of them take it.">
+                    <label className="mb-2 flex items-center justify-between gap-4 text-sm">
+                      Anyone on the team
+                      <Switch checked={draft.staffMode === "all"}
+                        onCheckedChange={(checked) => set("staffMode", checked ? "all" : "some")} />
+                    </label>
+                    {draft.staffMode === "some" ? (
+                      <div className="grid gap-2 rounded-lg border border-black/8 p-3">
+                        {staff.map((person) => (
+                          <label key={person.id} className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={draft.staffIds.includes(person.id)}
+                              onCheckedChange={(checked) => toggleStaff(person.id, checked === true)} />
+                            {person.name}
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </Field>
+                ) : null}
                 <label className="flex items-center justify-between gap-4 text-sm">
                   Show on my site
                   <Switch checked={draft.isVisible} onCheckedChange={(checked) => set("isVisible", checked)} />

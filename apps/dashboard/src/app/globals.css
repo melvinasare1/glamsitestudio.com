@@ -150,6 +150,13 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /* Tailwind's preflight stopped setting this on buttons; restore it so every
+     clickable control shows a pointer, not the text-select arrow. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {
