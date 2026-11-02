@@ -30,7 +30,7 @@ export default function AuthCallbackPage() {
           return;
         }
         window.history.replaceState(null, "", "/auth/callback");
-        router.replace(type === "recovery" ? "/auth/reset-password" : "/dashboard");
+        router.replace(type === "recovery" ? "/auth/reset-password" : "/");
         router.refresh();
       })
       .catch(() => {

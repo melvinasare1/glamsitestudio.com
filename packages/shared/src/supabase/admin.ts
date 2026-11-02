@@ -16,5 +16,8 @@ export function createAdminClient(): SupabaseClient {
 
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // Always read live data. Next.js would otherwise cache these GETs, and a
+    // booking page could show an appointment as booked after it was cancelled.
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
   });
 }

@@ -13,7 +13,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "start": "turbo run start",
-    "test:db": "node supabase/tests/rls.test.mjs"
+    "test:db": "node supabase/tests/rls.test.mjs",
+    "test:unit": "node --test \"packages/shared/test/*.test.ts\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4"

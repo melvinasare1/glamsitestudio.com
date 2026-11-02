@@ -108,7 +108,7 @@ export default function ResetPasswordPage() {
         setError(updateError.message);
         return;
       }
-      router.replace("/dashboard");
+      router.replace("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update your password.");

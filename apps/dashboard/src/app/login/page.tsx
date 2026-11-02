@@ -38,7 +38,7 @@ export default function LoginPage() {
         );
         return;
       }
-      router.replace("/dashboard");
+      router.replace("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not log in.");

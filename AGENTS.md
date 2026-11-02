@@ -3,7 +3,8 @@
 Glam Site Studios sells hosted websites to hair and beauty businesses (salons,
 barbers, nails, lash and brow, makeup artists). Owners pick a template, edit
 their content in a simple dashboard, and their site is served from this
-platform. Appointment booking is added later as a paid upgrade.
+platform. Clients book appointments on the site (services, staff, times),
+and payments, deposits, refunds and waitlists are being added in phases.
 
 This repo started as a copy of Ansaa (a multi-tenant storefront platform). The
 copy is being reshaped for salons in stages; see `docs/build-plan.md`.
@@ -17,7 +18,7 @@ copy is being reshaped for salons in stages; see `docs/build-plan.md`.
    Ansaa, Ternarie or Rise Crouch End.
 3. **Hair and beauty only.** No new niches until 50 paying sites.
 4. **One content schema.** Every template reads the same content structure
-   (`packages/shared/src/storefront-content-schema.ts`). A template never adds
+   (`packages/shared/src/site-content.ts`). A template never adds
    its own fields.
 5. **Forms, not a builder.** The dashboard edits content, not layout. No drag
    and drop.
@@ -45,3 +46,7 @@ copy is being reshaped for salons in stages; see `docs/build-plan.md`.
 - `app/` is routing; reusable or interactive UI lives in `components/`.
 - Never import `@glamsite/shared/supabase/admin` from a `"use client"` file.
 - Migrations live in `supabase/migrations/` and run in timestamp order.
+- Which times can be booked is decided only in `packages/shared/src/booking.ts`.
+  The booking API and the dashboard both use it; don't re-implement it in SQL.
+- Checks before a pull request: `npm run test:unit`, `npm run test:db`, and
+  type-check both apps.

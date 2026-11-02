@@ -5,16 +5,21 @@
 import { parseSiteContent } from "./site-content";
 import { DEFAULT_TEMPLATE_ID } from "./templates";
 import type {
+  Appointment,
+  AppointmentStatus,
   Business,
   BusinessBilling,
   BookingMode,
   BusinessStatus,
+  DepositStatus,
   Enquiry,
   OpeningHours,
   Service,
   ServiceCategory,
   StaffMember,
+  StaffWorkingHours,
   SubscriptionStatus,
+  TimeOff,
   Weekday,
 } from "./types";
 
@@ -145,5 +150,65 @@ export function enquiryFromRow(row: Row): Enquiry {
     message: str(row.message),
     isRead: bool(row.is_read),
     createdAt: str(row.created_at),
+  };
+}
+
+function embedded(value: unknown): Row | null {
+  if (Array.isArray(value)) return (value[0] as Row) ?? null;
+  return value && typeof value === "object" ? (value as Row) : null;
+}
+
+/** `clients(name, email, phone)` and `staff(name)` may be embedded. */
+export function appointmentFromRow(row: Row): Appointment {
+  const client = embedded(row.clients);
+  const staff = embedded(row.staff);
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    clientId: strOrNull(row.client_id),
+    serviceId: strOrNull(row.service_id),
+    staffId: strOrNull(row.staff_id),
+    serviceName: str(row.service_name),
+    startsAt: str(row.starts_at),
+    endsAt: str(row.ends_at),
+    status: oneOf<AppointmentStatus>(
+      row.status,
+      ["pending", "confirmed", "completed", "cancelled", "no_show"],
+      "confirmed"
+    ),
+    priceCents: intOrNull(row.price_cents),
+    currency: str(row.currency, "GBP"),
+    depositCents: int(row.deposit_cents),
+    depositStatus: oneOf<DepositStatus>(row.deposit_status, ["none", "pending", "paid", "refunded", "forfeited"], "none"),
+    source: oneOf(row.source, ["online", "manual"] as const, "online"),
+    clientNotes: str(row.client_notes),
+    internalNotes: str(row.internal_notes),
+    cancelledAt: strOrNull(row.cancelled_at),
+    cancelledBy: row.cancelled_by === "client" || row.cancelled_by === "business" ? row.cancelled_by : null,
+    createdAt: str(row.created_at),
+    client: client ? { name: str(client.name), email: str(client.email), phone: str(client.phone) } : null,
+    staffName: staff ? str(staff.name) : null,
+  };
+}
+
+export function workingHoursFromRow(row: Row): StaffWorkingHours {
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    staffId: str(row.staff_id),
+    weekday: Math.min(6, Math.max(0, int(row.weekday))) as Weekday,
+    startsAt: hhmm(row.starts_at),
+    endsAt: hhmm(row.ends_at),
+  };
+}
+
+export function timeOffFromRow(row: Row): TimeOff {
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    staffId: strOrNull(row.staff_id),
+    startsAt: str(row.starts_at),
+    endsAt: str(row.ends_at),
+    reason: str(row.reason),
   };
 }

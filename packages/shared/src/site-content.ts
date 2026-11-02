@@ -195,7 +195,7 @@ export const SITE_SECTIONS: SectionDefinition[] = [
     key: "services",
     label: "Services",
     description: "Your price list. Add the services themselves on the Services page.",
-    managedBy: { label: "Edit services and prices", href: "/dashboard/services" },
+    managedBy: { label: "Edit services and prices", href: "/services" },
     fields: [
       SHOW,
       { key: "heading", label: "Heading", type: "text", placeholder: "Services & prices", maxLength: 80 },
@@ -212,7 +212,7 @@ export const SITE_SECTIONS: SectionDefinition[] = [
     key: "team",
     label: "Team",
     description: "Your stylists and therapists. Add people on the Team page.",
-    managedBy: { label: "Edit team members", href: "/dashboard/team" },
+    managedBy: { label: "Edit team members", href: "/team" },
     fields: [
       SHOW,
       { key: "heading", label: "Heading", type: "text", placeholder: "Meet the team", maxLength: 80 },
@@ -299,7 +299,7 @@ export const SITE_SECTIONS: SectionDefinition[] = [
     label: "Opening hours & location",
     description:
       "Your hours and address. Set hours on the Opening hours page and your address in Business details.",
-    managedBy: { label: "Edit opening hours", href: "/dashboard/hours" },
+    managedBy: { label: "Edit opening hours", href: "/hours" },
     fields: [
       SHOW,
       { key: "heading", label: "Heading", type: "text", placeholder: "Visit us", maxLength: 80 },
@@ -345,7 +345,7 @@ export const SITE_SECTIONS: SectionDefinition[] = [
     label: "Booking banner",
     description:
       "A call to action near the bottom of the page. Where the Book buttons go is set on the Booking page.",
-    managedBy: { label: "Booking settings", href: "/dashboard/booking" },
+    managedBy: { label: "Booking settings", href: "/booking" },
     fields: [
       SHOW,
       { key: "heading", label: "Heading", type: "text", placeholder: "Ready for your next appointment?", maxLength: 80 },

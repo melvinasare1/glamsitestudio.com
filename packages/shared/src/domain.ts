@@ -101,3 +101,30 @@ export function siteUrl(business: {
   }
   return `https://${platformHostForSlug(business.slug)}`;
 }
+
+/**
+ * Whether customer sites are being served on their own hosts
+ * (`{slug}.glamsitestudio.com` or a custom domain). Only the production
+ * deployment has those; locally and on preview deployments a site lives at
+ * `/sites/{slug}` on the app's own host.
+ */
+export function sitesOnOwnHosts(): boolean {
+  return (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) === "production";
+}
+
+/** A link from one page of a site to another, e.g. sitePath("bella", "/book"). */
+export function sitePath(slug: string, path: string): string {
+  return sitesOnOwnHosts() ? path : `/sites/${slug}${path}`;
+}
+
+/**
+ * A full link to a page of a site, for emails. `webUrl` is the app's origin
+ * (getWebUrl()), used when sites aren't on their own hosts.
+ */
+export function siteLink(
+  business: { slug: string; customDomain: string | null; customDomainVerified: boolean },
+  path: string,
+  webUrl: string
+): string {
+  return sitesOnOwnHosts() ? `${siteUrl(business)}${path}` : `${webUrl}/sites/${business.slug}${path}`;
+}

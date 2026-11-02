@@ -33,8 +33,8 @@ export function NavMain({
             const Icon = item.icon;
             const isActive = item.external
               ? false
-              : item.url === "/dashboard"
-                ? pathname === "/dashboard"
+              : item.url === "/"
+                ? pathname === "/"
                 : pathname === item.url || pathname.startsWith(`${item.url}/`);
             return (
               <SidebarMenuItem

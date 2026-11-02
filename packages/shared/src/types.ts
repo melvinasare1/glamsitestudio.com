@@ -125,3 +125,53 @@ export type SiteData = {
   staff: StaffMember[];
   hours: OpeningHours[];
 };
+
+export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
+export type DepositStatus = "none" | "pending" | "paid" | "refunded" | "forfeited";
+
+export type Appointment = {
+  id: string;
+  businessId: string;
+  clientId: string | null;
+  serviceId: string | null;
+  staffId: string | null;
+  /** Snapshot of the service name when it was booked. */
+  serviceName: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  priceCents: number | null;
+  currency: string;
+  depositCents: number;
+  depositStatus: DepositStatus;
+  source: "online" | "manual";
+  clientNotes: string;
+  internalNotes: string;
+  cancelledAt: string | null;
+  cancelledBy: "client" | "business" | null;
+  createdAt: string;
+  /** Embedded when the query selects `clients(name, email, phone)`. */
+  client: { name: string; email: string; phone: string } | null;
+  /** Embedded when the query selects `staff(name)`. */
+  staffName: string | null;
+};
+
+/** One stretch of a team member's weekly working time ("HH:MM", local). */
+export type StaffWorkingHours = {
+  id: string;
+  businessId: string;
+  staffId: string;
+  weekday: Weekday;
+  startsAt: string;
+  endsAt: string;
+};
+
+/** Holiday, sickness or a closure. `staffId: null` closes the whole business. */
+export type TimeOff = {
+  id: string;
+  businessId: string;
+  staffId: string | null;
+  startsAt: string;
+  endsAt: string;
+  reason: string;
+};

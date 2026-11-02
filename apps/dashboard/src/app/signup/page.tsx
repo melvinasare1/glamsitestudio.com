@@ -46,7 +46,7 @@ export default function SignUpPage() {
         setConfirmEmail(true);
         return;
       }
-      router.replace("/dashboard");
+      router.replace("/");
       router.refresh();
     });
   }
