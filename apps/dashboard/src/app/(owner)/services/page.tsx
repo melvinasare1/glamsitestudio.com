@@ -22,6 +22,7 @@ export default async function ServicesPage() {
       />
       <PageBody>
         <ServicesManager
+          businessId={business.id}
           categories={(categories.data ?? []).map(categoryFromRow)}
           services={(services.data ?? []).map(serviceFromRow)}
           currency={business.currency}

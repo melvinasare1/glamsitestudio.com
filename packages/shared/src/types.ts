@@ -73,6 +73,7 @@ export type Service = {
   isVisible: boolean;
   isBookable: boolean;
   position: number;
+  imageUrl: string;
 };
 
 export type StaffMember = {

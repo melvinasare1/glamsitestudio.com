@@ -110,6 +110,7 @@ export function serviceFromRow(row: Row): Service {
     isVisible: bool(row.is_visible, true),
     isBookable: bool(row.is_bookable, true),
     position: int(row.position),
+    imageUrl: str(row.image_url),
   };
 }
 

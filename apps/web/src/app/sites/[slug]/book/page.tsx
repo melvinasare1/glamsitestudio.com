@@ -79,6 +79,8 @@ export default async function BookPage({ params, searchParams }: Props) {
           policyText={site.rules.policyText}
           cancellationNoticeHours={site.rules.cancellationNoticeHours}
           autoConfirm={site.rules.autoConfirm}
+          paymentPolicy={site.rules.paymentPolicy}
+          depositFixedCents={site.rules.depositFixedCents}
           homeHref={sitePath(business.slug, "/")}
           manageBase={sitePath(business.slug, "/appointment/")}
           initialServiceId={searchParams.service}

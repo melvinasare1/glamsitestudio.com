@@ -1,9 +1,11 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- public storage URLs at unknown sizes */
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { formatDuration, formatServicePrice, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory } from "@glamsite/shared/types";
+import { ImageInput } from "@/components/editor/image-input";
 import { EmptyState, Field, Panel } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,14 +44,17 @@ function toDraft(service: Service | null, categoryId: string | null): Draft {
     bufferMinutes: String(service?.bufferMinutes ?? 0),
     isVisible: service?.isVisible ?? true,
     isBookable: service?.isBookable ?? true,
+    imageUrl: service?.imageUrl ?? "",
   };
 }
 
 export function ServicesManager({
+  businessId,
   categories,
   services,
   currency,
 }: {
+  businessId: string;
   categories: ServiceCategory[];
   services: Service[];
   currency: string;
@@ -102,6 +107,9 @@ export function ServicesManager({
                 <ul className="divide-y divide-black/5 rounded-xl border border-black/5">
                   {group.services.map((service, index) => (
                     <li key={service.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                      {service.imageUrl ? (
+                        <img src={service.imageUrl} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
+                      ) : null}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{service.name}</p>
                         <p className="text-sm text-muted-foreground">
@@ -214,6 +222,10 @@ export function ServicesManager({
                 <SheetDescription>What clients see on your price list.</SheetDescription>
               </SheetHeader>
               <div className="grid gap-5 px-4">
+                <Field label="Photo" description="Shown to clients when they're choosing a service to book.">
+                  <ImageInput businessId={businessId} value={draft.imageUrl} aspect="wide"
+                    onChange={(url) => set("imageUrl", url)} />
+                </Field>
                 <Field id="svc-name" label="Name">
                   <Input id="svc-name" required maxLength={120} value={draft.name} placeholder="e.g. Cut & blow dry"
                     onChange={(event) => set("name", event.target.value)} />

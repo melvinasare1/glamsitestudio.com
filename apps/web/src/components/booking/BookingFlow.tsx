@@ -2,8 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element -- team photos come from storage at unknown sizes */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { addDays, formatDayLong, formatDayShort, staffForService } from "@glamsite/shared/booking";
-import { formatDuration, formatServicePrice, formatTime, groupServices } from "@glamsite/shared/format";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { addDays, depositAmountCents, formatDayLong, formatDayShort, staffForService, type PaymentPolicy } from "@glamsite/shared/booking";
+import { formatDuration, formatMoney, formatServicePrice, formatTime, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory } from "@glamsite/shared/types";
 
 type Person = {
@@ -27,6 +28,8 @@ type Props = {
   policyText: string;
   cancellationNoticeHours: number;
   autoConfirm: boolean;
+  paymentPolicy: PaymentPolicy;
+  depositFixedCents: number | null;
   homeHref: string;
   /** Path the manage token is appended to, e.g. "/appointment/". */
   manageBase: string;
@@ -90,12 +93,22 @@ export function BookingFlow(props: Props) {
   const effectiveStaff = !service ? null : askStaff ? staffChoice : team[0]?.id ?? null;
   const chosenPerson = staff.find((person) => person.id === effectiveStaff) ?? null;
 
+  const depositCents = service ? depositAmountCents(props.paymentPolicy, service.priceCents, props.depositFixedCents) : null;
+  const paymentNotice =
+    depositCents == null
+      ? null
+      : props.paymentPolicy === "full"
+        ? `Full payment of ${formatMoney(depositCents, currency)} is required. ${props.businessName} will contact you to arrange payment.`
+        : `A ${formatMoney(depositCents, currency)} deposit is required. ${props.businessName} will contact you to collect it.`;
+
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [range, setRange] = useState<{ first: string; loadedTo: string; last: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<SlotOption | null>(null);
+  /** The first day of the 7-day window shown in step 3. */
+  const [weekStart, setWeekStart] = useState<string | null>(null);
 
   const [details, setDetails] = useState<Details>({ name: "", email: "", phone: "", notes: "", agreed: false, website: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -157,8 +170,14 @@ export function BookingFlow(props: Props) {
     setRange(null);
     setDay(null);
     setSlot(null);
+    setWeekStart(null);
     if (service && effectiveStaff) void fetchSlots(new Date().toISOString().slice(0, 10), false);
   }, [service, effectiveStaff, fetchSlots]);
+
+  // The first page of slots has arrived: show the week it starts in.
+  useEffect(() => {
+    if (range && weekStart === null) setWeekStart(range.first);
+  }, [range, weekStart]);
 
   // Bring the step the client is on into view on small screens.
   useEffect(() => {
@@ -169,14 +188,38 @@ export function BookingFlow(props: Props) {
     }
   }, [step, done]);
 
-  const days = useMemo(() => {
-    if (!range) return [] as string[];
-    const list: string[] = [];
-    for (let d = range.first; d <= range.loadedTo; d = addDays(d, 1)) list.push(d);
-    return list;
-  }, [range]);
+  const weekDays = useMemo(
+    () => (weekStart ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) : []),
+    [weekStart]
+  );
   const openDays = useMemo(() => new Set(slots.map((item) => item.date)), [slots]);
   const daySlots = slots.filter((item) => item.date === day);
+
+  // Keep the selected day within the visible week, defaulting to its first open day.
+  useEffect(() => {
+    if (!weekStart) return;
+    setDay((prev) => (prev && weekDays.includes(prev) ? prev : weekDays.find((d) => openDays.has(d)) ?? null));
+  }, [weekStart, weekDays, openDays]);
+
+  const canGoPrevWeek = Boolean(range && weekStart && weekStart > range.first);
+  const canGoNextWeek = Boolean(range && weekStart && addDays(weekStart, 7) <= range.last);
+
+  function prevWeek() {
+    if (!range || !weekStart) return;
+    const target = addDays(weekStart, -7);
+    setWeekStart(target < range.first ? range.first : target);
+  }
+
+  async function nextWeek() {
+    if (!range || !weekStart) return;
+    const target = addDays(weekStart, 7);
+    if (target > range.last) return;
+    const weekEnd = addDays(target, 6);
+    if (weekEnd > range.loadedTo && range.loadedTo < range.last) {
+      await fetchSlots(addDays(range.loadedTo, 1), true);
+    }
+    setWeekStart(target);
+  }
 
   async function book(event: React.FormEvent) {
     event.preventDefault();
@@ -313,12 +356,17 @@ export function BookingFlow(props: Props) {
                           }}
                           className="group flex w-full items-start justify-between gap-4 py-4 text-left"
                         >
-                          <span className="min-w-0">
-                            <span className="block font-medium group-hover:underline group-hover:underline-offset-4">{item.name}</span>
-                            <span className="mt-0.5 block text-sm text-[#6e6468]">{formatDuration(item.durationMinutes)}</span>
-                            {item.description ? (
-                              <span className="mt-1 block max-w-prose text-sm text-[#6e6468]">{item.description}</span>
+                          <span className="flex min-w-0 items-start gap-3">
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
                             ) : null}
+                            <span className="min-w-0">
+                              <span className="block font-medium group-hover:underline group-hover:underline-offset-4">{item.name}</span>
+                              <span className="mt-0.5 block text-sm text-[#6e6468]">{formatDuration(item.durationMinutes)}</span>
+                              {item.description ? (
+                                <span className="mt-1 block max-w-prose text-sm text-[#6e6468]">{item.description}</span>
+                              ) : null}
+                            </span>
                           </span>
                           <span className="shrink-0 text-right">
                             <span className="block text-sm font-medium font-tabular">{formatServicePrice(item, currency)}</span>
@@ -383,43 +431,53 @@ export function BookingFlow(props: Props) {
               {!range && loading ? <p className="py-6 text-[#6e6468]">Finding free times…</p> : null}
               {range ? (
                 <>
-                  <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-3" role="listbox" aria-label="Day">
-                    {days.map((d) => {
-                      const open = openDays.has(d);
-                      const selected = d === day;
-                      const [, , dd] = d.split("-");
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          role="option"
-                          aria-selected={selected}
-                          aria-label={`${formatDayLong(d)}${open ? "" : ", no times"}`}
-                          disabled={!open}
-                          onClick={() => setDay(d)}
-                          className={`flex w-[58px] shrink-0 snap-start flex-col items-center rounded-2xl border py-2.5 transition ${
-                            selected
-                              ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-ink)]"
-                              : open
-                                ? "border-[#d9d1cd] hover:border-[#1f1a1c]"
-                                : "border-transparent text-[#bcb2b6] line-through decoration-1"
-                          }`}
-                        >
-                          <span className="text-[11px]">{formatDayShort(d).split(" ")[0]}</span>
-                          <span className="text-lg font-medium font-tabular leading-tight">{Number(dd)}</span>
-                        </button>
-                      );
-                    })}
-                    {range.loadedTo < range.last ? (
-                      <button
-                        type="button"
-                        disabled={loading}
-                        onClick={() => void fetchSlots(addDays(range.loadedTo, 1), true)}
-                        className="w-[96px] shrink-0 rounded-2xl border border-dashed border-[#d9d1cd] px-2 text-xs text-[#6e6468] hover:border-[#1f1a1c]"
-                      >
-                        {loading ? "Loading…" : "Later dates"}
-                      </button>
-                    ) : null}
+                  <div className="flex items-center gap-2 pb-3">
+                    <button
+                      type="button"
+                      aria-label="Previous week"
+                      disabled={!canGoPrevWeek}
+                      onClick={prevWeek}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#d9d1cd] text-[#4a4145] transition hover:border-[#1f1a1c] disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronLeft className="size-4" aria-hidden />
+                    </button>
+                    <div className="grid flex-1 grid-cols-7 gap-1.5" role="listbox" aria-label="Day">
+                      {weekDays.map((d) => {
+                        const open = openDays.has(d);
+                        const selected = d === day;
+                        const [, , dd] = d.split("-");
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            aria-label={`${formatDayLong(d)}${open ? "" : ", no times"}`}
+                            disabled={!open}
+                            onClick={() => setDay(d)}
+                            className={`flex flex-col items-center rounded-2xl border py-2.5 transition ${
+                              selected
+                                ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-ink)]"
+                                : open
+                                  ? "border-[#d9d1cd] hover:border-[#1f1a1c]"
+                                  : "border-transparent text-[#bcb2b6] line-through decoration-1"
+                            }`}
+                          >
+                            <span className="text-[11px]">{formatDayShort(d).split(" ")[0]}</span>
+                            <span className="text-lg font-medium font-tabular leading-tight">{Number(dd)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Next week"
+                      disabled={!canGoNextWeek || loading}
+                      onClick={() => void nextWeek()}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#d9d1cd] text-[#4a4145] transition hover:border-[#1f1a1c] disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronRight className="size-4" aria-hidden />
+                    </button>
                   </div>
 
                   {day ? (
@@ -452,8 +510,8 @@ export function BookingFlow(props: Props) {
                     </div>
                   ) : (
                     <p className="py-4 text-[#6e6468]">
-                      No free times in these dates.{" "}
-                      {range.loadedTo < range.last ? "Try later dates." : "Please get in touch to book."}
+                      No free times this week.{" "}
+                      {canGoNextWeek ? "Try the next week." : "Please get in touch to book."}
                     </p>
                   )}
                 </>
@@ -495,6 +553,10 @@ export function BookingFlow(props: Props) {
                   value={details.website}
                   onChange={(event) => setDetails((d) => ({ ...d, website: event.target.value }))}
                 />
+
+                {paymentNotice ? (
+                  <p className="rounded-xl bg-[#f7f4f2] px-4 py-3 text-sm text-[#4a4145]">{paymentNotice}</p>
+                ) : null}
 
                 {props.policyText.trim() ? (
                   <div className="rounded-xl bg-[#f7f4f2] px-4 py-4 text-sm">
@@ -540,7 +602,7 @@ export function BookingFlow(props: Props) {
       <aside className="hidden lg:block">
         <div className="sticky top-8">
           <Summary service={service} person={staffChoice === "any" ? "Anyone available" : chosenPerson?.name ?? null}
-            slot={slot} currency={currency} businessName={props.businessName} />
+            slot={slot} currency={currency} businessName={props.businessName} paymentNotice={paymentNotice} />
         </div>
       </aside>
 
@@ -688,12 +750,14 @@ function Summary({
   slot,
   currency,
   businessName,
+  paymentNotice,
 }: {
   service: Service | null;
   person: string | null;
   slot: SlotOption | null;
   currency: string;
   businessName: string;
+  paymentNotice: string | null;
 }) {
   return (
     <div className="rounded-3xl bg-[var(--accent)] p-6 text-[var(--accent-ink)]">
@@ -710,7 +774,7 @@ function Summary({
           <span className="text-lg font-medium font-tabular">{formatServicePrice(service, currency)}</span>
         </div>
       ) : null}
-      <p className="mt-4 text-xs opacity-70">Pay at the salon.</p>
+      <p className="mt-4 text-xs opacity-70">{paymentNotice ?? "Pay at the salon."}</p>
     </div>
   );
 }

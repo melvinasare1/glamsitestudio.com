@@ -15,6 +15,7 @@ export type ServiceInput = {
   bufferMinutes: number;
   isVisible: boolean;
   isBookable: boolean;
+  imageUrl: string;
 };
 
 const done = (): ActionResult => {
@@ -45,6 +46,7 @@ export async function saveService(input: ServiceInput): Promise<ActionResult> {
     buffer_minutes: buffer,
     is_visible: input.isVisible,
     is_bookable: input.isBookable,
+    image_url: input.imageUrl.trim().slice(0, 2000),
   };
 
   if (input.id) {
