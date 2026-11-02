@@ -154,6 +154,27 @@ await as("authenticated", A, async () => {
   check("deleting a category keeps its services, uncategorised", svc.rows[0].category_id === null);
 });
 
+// Booking clients (public booking runs as the service role; owners can add clients by hand)
+await as("anon", null, async () => {
+  check("anon cannot create booking clients", Boolean(await rejects(() => db.query(
+    "select public.upsert_booking_client('10000000-0000-0000-0000-00000000000a', 'X', 'x@x.com', '')"))));
+});
+await as("authenticated", A, async () => {
+  const first = await db.query("select public.upsert_booking_client('10000000-0000-0000-0000-00000000000a', 'Efua', 'Efua@Mail.com', '') as id");
+  const again = await db.query("select public.upsert_booking_client('10000000-0000-0000-0000-00000000000a', 'Efua M', ' efua@mail.com ', '07700 900123') as id");
+  check("same email in any case reuses the client", first.rows[0].id === again.rows[0].id);
+  const row = await db.query(`select name, email, phone from public.clients where id = '${first.rows[0].id}'`);
+  check("repeat booking keeps the name and fills a missing phone",
+    row.rows[0].name === "Efua" && row.rows[0].email === "efua@mail.com" && row.rows[0].phone === "07700 900123", JSON.stringify(row.rows[0]));
+  const noEmail1 = await db.query("select public.upsert_booking_client('10000000-0000-0000-0000-00000000000a', 'Walk-in', '', '0123') as id");
+  const noEmail2 = await db.query("select public.upsert_booking_client('10000000-0000-0000-0000-00000000000a', 'Walk-in', '', '0123') as id");
+  check("clients without email get their own records", noEmail1.rows[0].id !== noEmail2.rows[0].id);
+  check("owner A cannot add clients to salon B", Boolean(await rejects(() => db.query(
+    "select public.upsert_booking_client('10000000-0000-0000-0000-00000000000b', 'X', 'x@x.com', '')"))));
+  check("cancelled_by only allows client or business", Boolean(await rejects(() => db.query(
+    "update public.appointments set cancelled_by = 'someone'"))));
+});
+
 const badSlug = await rejects(() => db.query(`insert into public.businesses (owner_id, name, slug) values ('${A}', 'X', 'dashboard')`));
 check("reserved slugs are rejected", Boolean(badSlug));
 

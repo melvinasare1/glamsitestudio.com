@@ -64,9 +64,9 @@ export default async function OverviewPage() {
       essential: false,
     },
     {
-      done: business.bookingMode === "link",
-      title: "Connect your booking page",
-      body: "Optional. Send Book buttons to Fresha, Booksy or similar.",
+      done: business.bookingMode !== "none",
+      title: "Set up booking",
+      body: "Optional. Take bookings on your site, or send Book buttons to Fresha, Booksy or similar.",
       href: "/dashboard/booking",
       essential: false,
     },

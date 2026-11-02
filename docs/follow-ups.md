@@ -23,7 +23,31 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
 - **Old Ansaa buckets** (`product-images`, `id-verification`) are empty and
   can be deleted in Supabase Storage. No trigger.
 
+## Deferred after booking phase 1
+
+- **Any owner can turn on Glam Site booking.** It should come with the
+  booking add-on. Trigger: stage 3 billing.
+- **No rate limit on the public booking API.** A honeypot stops simple bots,
+  but nothing stops someone filling a diary with fake bookings. Trigger: the
+  first abuse, or before 10 live sites take bookings.
+- **Losing a booking race leaves a client record** with no appointment (the
+  client is saved before the time is claimed). Harmless; tidy up when a
+  client list page is built.
+- **The booking page uses neutral colours** when an owner hasn't picked
+  brand colours, not each template's own palette. Trigger: the second
+  template design.
+- **Two versions of the icon library** (`lucide-react` 1.x in the dashboard,
+  0.408 in the site app). The dashboard header's menu icon renders
+  differently on the server and in the browser, so React reports a hydration
+  error and re-renders the page in the browser. It was already on `main`.
+  Trigger: next dashboard UI work; align both apps on one version.
+
 ## Resolved
+
+- **Server pages showed cached database reads.** Next.js cached the GET
+  requests made by the Supabase clients, so a page could show an appointment
+  as booked after it was cancelled. Both server clients now always read live
+  data (fixed with booking phase 1).
 
 - **RLS performance warnings and the unindexed foreign key** from the Ansaa
   schema: gone with the stage 2 baseline (policies use `(select auth.uid())`;

@@ -82,16 +82,64 @@ Next in stage 2:
 - [ ] Annual plans and in-dashboard upgrade to done-for-you
 - [ ] Gate: 30 sites live and owners asking for booking
 
-## Stage 5 · Booking (adapted from Ternarie)
+## Stage 5 · Booking (adapted from Ternarie), brought forward
 
-- [ ] Tables: `staff_services`, `working_hours`, `time_off`,
-      `booking_settings`, `appointments`
-- [ ] Availability engine in `packages/shared`
-- [ ] `/book` flow on every site: service, staff, time, details, deposit
-- [ ] Stripe Connect onboarding in the dashboard; deposits go to the salon's
-      connected account
-- [ ] Confirmation and reminder emails; SMS or WhatsApp later
-- [ ] Dashboard calendar per staff member and a client list
-- [ ] Booking unlocked by the booking add-on on the hosting subscription;
-      owners who keep their own tool just paste its link
+Decided 1 Nov 2026: booking is the backbone of the platform, so it is built
+now rather than after 30 live sites. The logic comes from Ternarie's
+appointments package (slot engine, booking screens, booking checks, emails),
+rewritten onto this repo's own salon tables. Ternarie itself is untouched
+(rule 1); no credits, classes or memberships come across (rule 8).
+
+### Phase 1 · Appointments (done, 2 Nov 2026)
+
+- [x] Availability engine in `packages/shared/src/booking.ts`: staff hours
+      (or opening hours), service length and clean-up buffer, time off and
+      closures, minimum notice, booking window, each business's time zone.
+      Unit tests: `npm run test:unit`
+- [x] `/book` on every site: service, person (or anyone available), time,
+      details. Book buttons go there when Glam Site booking is on
+- [x] Booking API re-checks every time; the database's no-double-booking
+      rule settles two clients booking at once
+- [x] Client's private link (`/appointment/{token}`): view and cancel, with
+      the owner's cancellation cut-off
+- [x] Emails: client confirmation, owner notice, cancellations (Resend)
+- [x] Dashboard Appointments: week view per person, requests to confirm,
+      completed and no-show, cancel, owner's notes, add appointments by hand
+- [x] Dashboard Booking: rules, each person's working hours, time off and
+      closures, booking policy, auto-confirm or review each booking
+
+### Phase 2 · Payments and deposits (Stripe Connect)
+
+- [ ] Connect onboarding in the dashboard (Express accounts); the account id
+      goes in `business_billing.stripe_connect_account_id`
+- [ ] Per service: deposit, full payment up front, or pay at the salon
+      (`services.deposit_cents`, `booking_settings.require_deposit`)
+- [ ] Checkout on the salon's connected account; the slot is held as
+      "pending" for 15 minutes and released if unpaid
+- [ ] `payment_intent.succeeded` webhook confirms the appointment and sets
+      `deposit_status`
+- [ ] Owner records in-salon payments; appointment shows paid, deposit, due
+- [ ] Decide our platform fee per booking, if any
+
+### Phase 3 · Refunds and no-show rules
+
+- [ ] Client cancels before the cut-off: deposit refunded automatically
+- [ ] Late cancel or no-show: deposit kept (`forfeited`), as the policy says
+- [ ] Owner refunds from the appointment panel: full or partial
+- [ ] Refund and payment history per appointment
+
+### Phase 4 · Waitlist
+
+- [ ] When a day is full, clients join the waitlist for a service, person
+      (or anyone) and a date range
+- [ ] When a matching time frees up, waitlisted clients get an email with a
+      link to book it; first to book gets it
+- [ ] Owner sees and manages the waitlist in Appointments
+
+### Phase 5 · Reminders and reschedule
+
+- [ ] Reminder email 24 hours before (scheduled job); SMS or WhatsApp later
+- [ ] Clients move their own appointment from the private link
+- [ ] Booking unlocked by the booking add-on on the hosting subscription
+      (needs stage 3 billing); owners who keep their own tool paste its link
 - [ ] Pilot with 3 site customers

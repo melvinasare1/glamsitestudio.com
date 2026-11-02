@@ -4,7 +4,9 @@
   "private": true,
   "exports": {
     "./demo": "./src/demo.ts",
+    "./booking": "./src/booking.ts",
     "./domain": "./src/domain.ts",
+    "./email": "./src/email.ts",
     "./format": "./src/format.ts",
     "./mappers": "./src/mappers.ts",
     "./site-content": "./src/site-content.ts",

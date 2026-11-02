@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthFrame } from "@/components/auth-frame";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { createClient } from "@glamsite/shared/supabase/server";
 import { getDashboardSession } from "@/lib/business";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +25,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     );
   }
 
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", session.business.id)
+    .eq("status", "pending")
+    .gte("starts_at", new Date().toISOString());
+
   return (
-    <DashboardShell user={session.user} business={session.business}>
+    <DashboardShell user={session.user} business={session.business} pendingCount={count ?? 0}>
       {children}
     </DashboardShell>
   );

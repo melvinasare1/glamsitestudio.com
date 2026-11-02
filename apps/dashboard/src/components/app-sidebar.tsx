@@ -2,6 +2,7 @@
 
 import {
   CalendarClockIcon,
+  CalendarDaysIcon,
   ClockIcon,
   CreditCardIcon,
   ExternalLinkIcon,
@@ -19,10 +20,11 @@ import { NavMain } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { useBusiness } from "@/lib/business-context";
 
-type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolean };
+type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolean; badge?: number };
 
 const NAV: NavItem[] = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
+  { title: "Appointments", url: "/dashboard/appointments", icon: CalendarDaysIcon },
   { title: "Website", url: "/dashboard/website", icon: PaletteIcon },
   { title: "Services", url: "/dashboard/services", icon: ScissorsIcon },
   { title: "Team", url: "/dashboard/team", icon: UsersIcon },
@@ -36,11 +38,14 @@ const NAV: NavItem[] = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { business, siteUrl } = useBusiness();
+  const { business, siteUrl, pendingCount } = useBusiness();
+  const nav = NAV.map((item) =>
+    item.url === "/dashboard/appointments" ? { ...item, badge: pendingCount } : item
+  );
   const items =
     business.status === "live"
-      ? [...NAV, { title: "View site", url: siteUrl, icon: ExternalLinkIcon, external: true }]
-      : NAV;
+      ? [...nav, { title: "View site", url: siteUrl, icon: ExternalLinkIcon, external: true }]
+      : nav;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

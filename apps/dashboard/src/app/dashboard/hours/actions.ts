@@ -2,28 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
+import { weeklySlotsProblem } from "@/lib/weekly-hours";
 
 export type HoursSlot = { weekday: number; opensAt: string; closesAt: string };
-
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Replace the business's weekly opening hours. */
 export async function saveHours(slots: HoursSlot[]): Promise<ActionResult> {
   const ctx = await ownerContext();
   if (!ctx.ok) return ctx;
 
-  if (slots.length > 21) return fail("That's too many time slots.");
-  for (const slot of slots) {
-    if (!Number.isInteger(slot.weekday) || slot.weekday < 0 || slot.weekday > 6) return fail("Unknown day.");
-    if (!TIME.test(slot.opensAt) || !TIME.test(slot.closesAt)) return fail("Use times like 09:00.");
-    if (slot.closesAt <= slot.opensAt) return fail("Closing time must be after opening time.");
-  }
-  for (let day = 0; day < 7; day++) {
-    const sorted = slots.filter((slot) => slot.weekday === day).sort((a, b) => a.opensAt.localeCompare(b.opensAt));
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i].opensAt < sorted[i - 1].closesAt) return fail("Two time slots on the same day overlap.");
-    }
-  }
+  const problem = weeklySlotsProblem(
+    slots.map((slot) => ({ weekday: slot.weekday, start: slot.opensAt, end: slot.closesAt })),
+    { start: "Opening time", end: "Closing time" }
+  );
+  if (problem) return fail(problem);
 
   const { error: deleteError } = await ctx.supabase.from("opening_hours").delete().eq("business_id", ctx.business.id);
   if (deleteError) return dbError("clear hours", deleteError);

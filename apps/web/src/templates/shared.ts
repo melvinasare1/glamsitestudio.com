@@ -1,10 +1,12 @@
+import { sitePath } from "@glamsite/shared/domain";
 import { sectionText } from "@glamsite/shared/site-content";
 import type { Business } from "@glamsite/shared/types";
 
 /** Where every Book button on a site goes. */
 export function bookingHref(business: Business): string {
+  if (business.bookingMode === "glamsite") return sitePath(business.slug, "/book");
   if (business.bookingMode === "link" && business.bookingUrl.trim()) return business.bookingUrl.trim();
-  // Glam Site booking (stage 5) isn't built yet; send visitors to the contact section meanwhile.
+  // No online booking: send visitors to the contact section.
   return "#contact";
 }
 

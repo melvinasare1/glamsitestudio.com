@@ -10,14 +10,16 @@ import type { Business, OwnerUser } from "@glamsite/shared/types";
 export function DashboardShell({
   user,
   business,
+  pendingCount,
   children,
 }: {
   user: OwnerUser;
   business: Business;
+  pendingCount: number;
   children: React.ReactNode;
 }) {
   return (
-    <BusinessProvider user={user} business={business}>
+    <BusinessProvider user={user} business={business} pendingCount={pendingCount}>
       <SidebarProvider
         className="flex-col"
         style={{ "--sidebar-width": "15rem", "--header-height": "4rem" } as React.CSSProperties}

@@ -10,6 +10,8 @@ type BusinessContextValue = {
   business: Business;
   /** Public address of the site (shows only once it's live). */
   siteUrl: string;
+  /** Upcoming online bookings waiting for the owner to confirm. */
+  pendingCount: number;
   signOut: () => Promise<void>;
 };
 
@@ -18,10 +20,12 @@ const BusinessContext = createContext<BusinessContextValue | null>(null);
 export function BusinessProvider({
   user,
   business,
+  pendingCount,
   children,
 }: {
   user: OwnerUser;
   business: Business;
+  pendingCount: number;
   children: React.ReactNode;
 }) {
   const signOut = useCallback(async () => {
@@ -29,8 +33,8 @@ export function BusinessProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ user, business, siteUrl: siteUrl(business), signOut }),
-    [user, business, signOut]
+    () => ({ user, business, siteUrl: siteUrl(business), pendingCount, signOut }),
+    [user, business, pendingCount, signOut]
   );
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;

@@ -21,6 +21,8 @@ export async function createClient() {
   const cookieStore = cookies();
 
   return createServerClient(url, key, {
+    // Owners' pages always show live data (see admin.ts).
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -12,15 +12,15 @@ import { saveBooking } from "./actions";
 
 type Mode = "none" | "link" | "glamsite";
 
-const OPTIONS: { value: Mode; title: string; body: string; soon?: boolean }[] = [
+const OPTIONS: { value: Mode; title: string; body: string }[] = [
+  { value: "glamsite", title: "Glam Site booking", body: "Clients pick a service, a person and a time on your site. Bookings land in Appointments and both of you get emails." },
   { value: "link", title: "My booking page", body: "Book buttons open the booking tool you already use: Fresha, Booksy, Calendly, Square and so on." },
   { value: "none", title: "No online booking", body: "Book buttons take clients to your contact details and message form." },
-  { value: "glamsite", title: "Glam Site booking", body: "Bookings, deposits and reminders built into your site and this dashboard.", soon: true },
 ];
 
 export function BookingForm({ business }: { business: Business }) {
   const { pending, run } = useAction();
-  const [mode, setMode] = useState<Mode>(business.bookingMode === "glamsite" ? "none" : business.bookingMode);
+  const [mode, setMode] = useState<Mode>(business.bookingMode);
   const [url, setUrl] = useState(business.bookingUrl);
 
   return (
@@ -29,8 +29,7 @@ export function BookingForm({ business }: { business: Business }) {
         className="grid gap-5"
         onSubmit={(event) => {
           event.preventDefault();
-          if (mode === "glamsite") return;
-          run(() => saveBooking({ mode, url }), "Booking settings saved");
+          run(() => saveBooking({ mode, url }), mode === "glamsite" ? "Online booking is on" : "Booking settings saved");
         }}
       >
         <div role="radiogroup" className="grid gap-3">
@@ -40,16 +39,15 @@ export function BookingForm({ business }: { business: Business }) {
               type="button"
               role="radio"
               aria-checked={mode === option.value}
-              disabled={option.soon}
               onClick={() => setMode(option.value)}
               className={cn(
-                "rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
+                "rounded-xl border p-4 text-left transition",
                 mode === option.value ? "border-brand bg-brand-soft/50 ring-1 ring-brand" : "border-black/8 hover:border-black/20"
               )}
             >
               <span className="flex items-center gap-2 font-medium">
                 {option.title}
-                {option.soon ? <Badge variant="outline">Coming soon</Badge> : null}
+                {business.bookingMode === option.value ? <Badge variant="outline">Current</Badge> : null}
               </span>
               <span className="mt-1 block text-sm text-muted-foreground">{option.body}</span>
             </button>
@@ -62,7 +60,7 @@ export function BookingForm({ business }: { business: Business }) {
           </Field>
         ) : null}
         <div>
-          <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+          <Button type="submit" size="lg" disabled={pending || (mode === business.bookingMode && (mode !== "link" || url === business.bookingUrl))}>{pending ? "Saving…" : "Save"}</Button>
         </div>
       </form>
     </Panel>

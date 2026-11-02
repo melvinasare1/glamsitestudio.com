@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createBooking, loadBookingSite, parseBookingRequest } from "@/lib/booking";
+
+/** POST /api/booking/book: a client books an appointment on a live site. */
+export async function POST(req: NextRequest) {
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const parsed = parseBookingRequest(raw);
+  if (!parsed.ok) {
+    // Bots get a quiet success so they don't retry.
+    return parsed.bot
+      ? NextResponse.json({ ok: true }, { status: 201 })
+      : NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
+  const loaded = await loadBookingSite(parsed.data.slug);
+  if (!loaded.ok) {
+    return NextResponse.json(
+      { error: "Online booking isn't available for this site." },
+      { status: loaded.reason === "unavailable" ? 503 : 404 }
+    );
+  }
+
+  const outcome = await createBooking(loaded.site, parsed.data);
+  if (!outcome.ok) {
+    return NextResponse.json({ error: outcome.error, code: outcome.code }, { status: outcome.status });
+  }
+  return NextResponse.json({ ok: true, token: outcome.token, status: outcome.status }, { status: 201 });
+}
