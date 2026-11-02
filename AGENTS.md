@@ -45,7 +45,10 @@ copy is being reshaped for salons in stages; see `docs/build-plan.md`.
   `@glamsite/shared/mappers`.
 - `app/` is routing; reusable or interactive UI lives in `components/`.
 - Never import `@glamsite/shared/supabase/admin` from a `"use client"` file.
-- Migrations live in `supabase/migrations/` and run in timestamp order.
+- Migrations live in `supabase/migrations/` and run in timestamp order. Each
+  one that changes structure has an undo script in `supabase/rollbacks/`, and
+  every change to staging or production is logged in
+  `docs/database-changes.md`.
 - Which times can be booked is decided only in `packages/shared/src/booking.ts`.
   The booking API and the dashboard both use it; don't re-implement it in SQL.
 - Checks before a pull request: `npm run test:unit`, `npm run test:db`, and
