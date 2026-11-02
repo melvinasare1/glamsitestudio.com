@@ -8,7 +8,7 @@ import { weeklySlotsProblem, type WeeklySlot } from "@/lib/weekly-hours";
 type Mode = "none" | "link" | "glamsite";
 
 const done = (): ActionResult => {
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 };
 

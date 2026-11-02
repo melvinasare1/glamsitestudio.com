@@ -32,6 +32,6 @@ export async function saveHours(slots: HoursSlot[]): Promise<ActionResult> {
     if (error) return dbError("save hours", error);
   }
 
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }

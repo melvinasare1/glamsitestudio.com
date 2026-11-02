@@ -15,7 +15,7 @@ export async function saveSection(sectionKey: string, values: unknown): Promise<
   const { error } = await ctx.supabase.from("businesses").update({ content }).eq("id", ctx.business.id);
   if (error) return dbError("save section", error);
 
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -30,6 +30,6 @@ export async function saveTemplate(templateId: string): Promise<ActionResult> {
     .eq("id", ctx.business.id);
   if (error) return dbError("save template", error);
 
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }

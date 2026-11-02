@@ -27,7 +27,7 @@ const NEXT: Record<AppointmentStatus, AppointmentStatus[]> = {
 };
 
 const done = (): ActionResult => {
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 };
 

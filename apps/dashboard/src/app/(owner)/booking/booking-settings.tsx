@@ -205,7 +205,7 @@ export function StaffHours({
     >
       {bookable.length === 0 ? (
         <EmptyState title="Nobody can be booked yet">
-          Add yourself or your team on the <a className="font-medium underline" href="/dashboard/team">Team page</a>, with
+          Add yourself or your team on the <a className="font-medium underline" href="/team">Team page</a>, with
           &ldquo;Clients can book with them online&rdquo; switched on.
         </EmptyState>
       ) : (

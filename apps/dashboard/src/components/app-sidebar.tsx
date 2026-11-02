@@ -23,24 +23,24 @@ import { useBusiness } from "@/lib/business-context";
 type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolean; badge?: number };
 
 const NAV: NavItem[] = [
-  { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
-  { title: "Appointments", url: "/dashboard/appointments", icon: CalendarDaysIcon },
-  { title: "Website", url: "/dashboard/website", icon: PaletteIcon },
-  { title: "Services", url: "/dashboard/services", icon: ScissorsIcon },
-  { title: "Team", url: "/dashboard/team", icon: UsersIcon },
-  { title: "Opening hours", url: "/dashboard/hours", icon: ClockIcon },
-  { title: "Booking", url: "/dashboard/booking", icon: CalendarClockIcon },
-  { title: "Messages", url: "/dashboard/messages", icon: MailIcon },
-  { title: "Business details", url: "/dashboard/details", icon: SettingsIcon },
-  { title: "Billing", url: "/dashboard/billing", icon: CreditCardIcon },
-  { title: "Support", url: "/dashboard/support", icon: LifeBuoyIcon },
+  { title: "Overview", url: "/", icon: LayoutDashboardIcon },
+  { title: "Appointments", url: "/appointments", icon: CalendarDaysIcon },
+  { title: "Website", url: "/website", icon: PaletteIcon },
+  { title: "Services", url: "/services", icon: ScissorsIcon },
+  { title: "Team", url: "/team", icon: UsersIcon },
+  { title: "Opening hours", url: "/hours", icon: ClockIcon },
+  { title: "Booking", url: "/booking", icon: CalendarClockIcon },
+  { title: "Messages", url: "/messages", icon: MailIcon },
+  { title: "Business details", url: "/details", icon: SettingsIcon },
+  { title: "Billing", url: "/billing", icon: CreditCardIcon },
+  { title: "Support", url: "/support", icon: LifeBuoyIcon },
 ];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { business, siteUrl, pendingCount } = useBusiness();
   const nav = NAV.map((item) =>
-    item.url === "/dashboard/appointments" ? { ...item, badge: pendingCount } : item
+    item.url === "/appointments" ? { ...item, badge: pendingCount } : item
   );
   const items =
     business.status === "live"

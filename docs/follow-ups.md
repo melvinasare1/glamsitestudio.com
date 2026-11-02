@@ -42,6 +42,11 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   error and re-renders the page in the browser. It was already on `main`.
   Trigger: next dashboard UI work; align both apps on one version.
 
+- **Owner dashboard on the owner's own domain** (e.g. `dashboard.bellahair.co.uk`).
+  Clients never see the dashboard, and sign-in emails would still have to go
+  through `dashboard.glamsitestudio.com`, so it adds setup and support for
+  little gain. Trigger: an agency or chain asks to resell under its own brand.
+
 ## Resolved
 
 - **Server pages showed cached database reads.** Next.js cached the GET

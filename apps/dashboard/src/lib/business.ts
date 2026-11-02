@@ -49,7 +49,7 @@ export async function getDashboardSession(): Promise<DashboardSession | null> {
   };
 }
 
-/** The business for the current page; pages under /dashboard are only rendered once one exists. */
+/** The business for the current page; owner pages are only rendered once one exists. */
 export async function requireBusiness(): Promise<{ session: DashboardSession; business: Business }> {
   const session = await getDashboardSession();
   if (!session?.business) throw new Error("No business is linked to this account.");

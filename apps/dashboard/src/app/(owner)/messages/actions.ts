@@ -12,7 +12,7 @@ export async function setEnquiryRead(id: string, isRead: boolean): Promise<Actio
     .eq("id", id)
     .eq("business_id", ctx.business.id);
   if (error) return dbError("mark enquiry", error);
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -21,6 +21,6 @@ export async function deleteEnquiry(id: string): Promise<ActionResult> {
   if (!ctx.ok) return ctx;
   const { error } = await ctx.supabase.from("enquiries").delete().eq("id", id).eq("business_id", ctx.business.id);
   if (error) return dbError("delete enquiry", error);
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }

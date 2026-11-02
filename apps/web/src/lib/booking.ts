@@ -441,7 +441,7 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
       token,
       service.priceIsFrom
     );
-    const dashboardUrl = `${getDashboardUrl()}/dashboard/appointments`;
+    const dashboardUrl = `${getDashboardUrl()}/appointments`;
     const toClient = clientBookingEmail(details);
     const toOwner = ownerNewBookingEmail(details, dashboardUrl);
     const owner = await ownerEmail(supabase, business);
@@ -534,7 +534,7 @@ export async function cancelByToken(token: string): Promise<{ ok: true } | { ok:
         })
       : Promise.resolve(false),
     owner
-      ? sendEmail({ to: owner, ...ownerClientCancelledEmail(details, `${getDashboardUrl()}/dashboard/appointments`) })
+      ? sendEmail({ to: owner, ...ownerClientCancelledEmail(details, `${getDashboardUrl()}/appointments`) })
       : Promise.resolve(false),
   ]);
 

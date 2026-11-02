@@ -22,7 +22,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-4 border-b border-black/4 bg-white px-4 lg:px-6">
       <SidebarTrigger className="md:hidden" />
-      <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+      <Link href="/" className="flex min-w-0 items-center gap-2.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-navy text-[11px] font-semibold tracking-wide text-white">
           {initials || "G"}
         </span>

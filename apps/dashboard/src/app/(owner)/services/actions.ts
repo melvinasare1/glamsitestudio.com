@@ -18,7 +18,7 @@ export type ServiceInput = {
 };
 
 const done = (): ActionResult => {
-  revalidatePath("/dashboard/services");
+  revalidatePath("/services");
   return { ok: true };
 };
 

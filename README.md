@@ -20,7 +20,7 @@ apps/
     src/app/api/contact/       Site contact form → enquiries
     src/templates/             One component per template (starter layout for now)
   dashboard/    Owner dashboard (port 3001)
-    src/app/dashboard/         Overview, Website, Services, Team, Opening hours,
+    src/app/(owner)/           Overview, Website, Services, Team, Opening hours,
                                Booking, Messages, Business details, Billing, Support
     src/app/signup/            Temporary self-serve sign-up (Stripe checkout in stage 3)
 

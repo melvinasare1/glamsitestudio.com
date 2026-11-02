@@ -32,42 +32,42 @@ export default async function OverviewPage() {
       done: Boolean(business.address.line1 && (business.phone || business.email)),
       title: "Add your address and contact details",
       body: "So clients can find and reach you.",
-      href: "/dashboard/details",
+      href: "/details",
       essential: true,
     },
     {
       done: Boolean(sectionText(business.content, "hero", "headline") || sectionText(business.content, "hero", "image")),
       title: "Write your headline and add a main photo",
       body: "The first thing visitors see.",
-      href: "/dashboard/website",
+      href: "/website",
       essential: true,
     },
     {
       done: services > 0,
       title: "Add your services and prices",
       body: services ? `${services} added.` : "Your price list.",
-      href: "/dashboard/services",
+      href: "/services",
       essential: true,
     },
     {
       done: hours > 0,
       title: "Set your opening hours",
       body: "Shown in the Visit us section.",
-      href: "/dashboard/hours",
+      href: "/hours",
       essential: true,
     },
     {
       done: staff > 0,
       title: "Introduce your team",
       body: staff ? `${staff} added.` : "Optional, but clients love putting a face to a name.",
-      href: "/dashboard/team",
+      href: "/team",
       essential: false,
     },
     {
       done: business.bookingMode !== "none",
       title: "Set up booking",
       body: "Optional. Take bookings on your site, or send Book buttons to Fresha, Booksy or similar.",
-      href: "/dashboard/booking",
+      href: "/booking",
       essential: false,
     },
   ];
@@ -105,7 +105,7 @@ export default async function OverviewPage() {
         <Panel
           title="Messages"
           actions={
-            <Link href="/dashboard/messages" className="text-sm font-medium text-brand">
+            <Link href="/messages" className="text-sm font-medium text-brand">
               Open messages
             </Link>
           }

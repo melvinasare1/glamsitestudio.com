@@ -22,6 +22,6 @@ export async function setPublished(live: boolean): Promise<ActionResult> {
     .eq("id", ctx.business.id);
   if (error) return dbError("set published", error);
 
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }

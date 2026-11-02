@@ -16,7 +16,7 @@ export type StaffInput = {
 };
 
 const done = (): ActionResult => {
-  revalidatePath("/dashboard/team");
+  revalidatePath("/team");
   return { ok: true };
 };
 

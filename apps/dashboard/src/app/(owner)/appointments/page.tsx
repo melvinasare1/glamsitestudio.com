@@ -67,7 +67,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
             <p className="text-sm">
               <span className="font-medium">Online booking is off.</span>{" "}
               <span className="text-muted-foreground">You can still add appointments here yourself. To let clients book on your site, </span>
-              <Link href="/dashboard/booking" className="font-medium text-brand underline-offset-4 hover:underline">
+              <Link href="/booking" className="font-medium text-brand underline-offset-4 hover:underline">
                 turn on Glam Site booking
               </Link>
               .

@@ -50,6 +50,6 @@ export async function saveDetails(input: DetailsInput): Promise<ActionResult> {
     .eq("id", ctx.business.id);
   if (error) return dbError("save details", error);
 
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/", "layout");
   return { ok: true };
 }

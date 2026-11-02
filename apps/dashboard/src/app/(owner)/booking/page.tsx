@@ -59,10 +59,10 @@ export default async function BookingPage() {
   );
 
   const gaps = [
-    !bookableServices.length && { text: "Add a service clients can book", href: "/dashboard/services" },
-    !team.some((person) => person.isBookable) && { text: "Add someone clients can book with", href: "/dashboard/team" },
-    team.some((person) => person.isBookable) && !hasTimes && { text: "Set your opening hours or someone's working hours", href: "/dashboard/hours" },
-    business.status !== "live" && { text: "Publish your site", href: "/dashboard" },
+    !bookableServices.length && { text: "Add a service clients can book", href: "/services" },
+    !team.some((person) => person.isBookable) && { text: "Add someone clients can book with", href: "/team" },
+    team.some((person) => person.isBookable) && !hasTimes && { text: "Set your opening hours or someone's working hours", href: "/hours" },
+    business.status !== "live" && { text: "Publish your site", href: "/" },
   ].filter(Boolean) as { text: string; href: string }[];
 
   const bookingUrl = siteLink(business, "/book", getWebUrl());
@@ -77,7 +77,7 @@ export default async function BookingPage() {
             <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-4">
               your booking page
             </a>
-            . New bookings appear in <Link href="/dashboard/appointments" className="font-medium text-foreground underline underline-offset-4">Appointments</Link>.
+            . New bookings appear in <Link href="/appointments" className="font-medium text-foreground underline underline-offset-4">Appointments</Link>.
           </>
         }
       />

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
 /**
- * Refresh the Auth session cookies, then gate owner-only dashboard routes.
+ * Refresh the Auth session cookies, then gate the owner dashboard's pages.
  *
  * Public sites are served by apps/web and never hit this function.
  */
@@ -13,15 +13,17 @@ export async function updateSession(request: NextRequest) {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
   const path = request.nextUrl.pathname;
-  const isDashboard = path === "/dashboard" || path.startsWith("/dashboard/");
   const isAuthPage = path === "/login" || path === "/signup";
+  // Every dashboard page needs a signed-in owner, except sign-in itself, the
+  // links in auth emails, and API routes (which check the session themselves).
+  const isOwnerPage = !isAuthPage && !path.startsWith("/auth/") && !path.startsWith("/api/");
   // Server Actions POST to the current page. Redirecting those requests
   // (e.g. after signUp sets a session) makes Next return undefined to the
   // client — `"error" in result` then throws.
   const isServerAction = request.headers.has("next-action");
 
   if (!url || !key) {
-    if (isDashboard) {
+    if (isOwnerPage) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       redirectUrl.search = "";
@@ -56,7 +58,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && isDashboard && !isServerAction) {
+  if (!user && isOwnerPage && !isServerAction) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.search = "";
@@ -69,7 +71,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage && !isServerAction) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    redirectUrl.pathname = "/";
     redirectUrl.search = "";
     const redirectResponse = NextResponse.redirect(redirectUrl);
     supabaseResponse.cookies.getAll().forEach((cookie) => {
