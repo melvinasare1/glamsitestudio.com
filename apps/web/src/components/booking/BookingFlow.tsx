@@ -246,7 +246,17 @@ export function BookingFlow(props: Props) {
           website: details.website,
         }),
       });
-      const body = (await response.json()) as { token?: string; status?: "pending" | "confirmed"; error?: string; code?: string };
+      const body = (await response.json()) as {
+        token?: string;
+        status?: "pending" | "confirmed";
+        checkoutUrl?: string;
+        error?: string;
+        code?: string;
+      };
+      if (response.ok && body.checkoutUrl) {
+        window.location.href = body.checkoutUrl;
+        return;
+      }
       if (response.ok && body.token && body.status) {
         setDone({ token: body.token, status: body.status, slot, serviceId: service.id, staffName: chosenPerson?.name ?? null });
         window.scrollTo({ top: 0, behavior: "smooth" });

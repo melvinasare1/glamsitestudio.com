@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
+import {
+  DONE_FOR_YOU_PRICE_CENTS,
+  EMAIL_QUOTA_BY_TIER,
+  HOSTING_TIER_PRICE_CENTS,
+  canCustomizeEmailToggles,
+  hasCampaignsAccess,
+} from "@glamsite/shared/billing";
+import type { HostingTier } from "@glamsite/shared/types";
 import { DesktopFrame } from "@/components/marketing/DeviceFrames";
 import { LeadForm } from "@/components/marketing/LeadForm";
 import { SitePreview } from "@/components/marketing/SitePreview";
@@ -38,6 +46,12 @@ const INCLUDED = [
   ["Message form", "Enquiries land in your dashboard, not lost in DMs."],
   ["Your own address", "yourname.glamsitestudio.com, or connect your own domain."],
   ["Made for phones", "Most clients find you on Instagram, so it's built for small screens first."],
+];
+
+const HOSTING_TIERS: { value: HostingTier; priceDollars: number }[] = [
+  { value: "basic", priceDollars: HOSTING_TIER_PRICE_CENTS.basic / 100 },
+  { value: "popular", priceDollars: HOSTING_TIER_PRICE_CENTS.popular / 100 },
+  { value: "premium", priceDollars: HOSTING_TIER_PRICE_CENTS.premium / 100 },
 ];
 
 const FAQS = [
@@ -177,22 +191,27 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-5 py-20 md:px-8 md:py-28">
           <h2 className="font-didone text-4xl leading-tight md:text-5xl">Simple pricing</h2>
           <p className="mt-4 max-w-lg leading-relaxed text-white/70">
-            One payment for your template, then hosting each month. Your first month is $1.
+            Pick a template, choose how it's built, then pick a hosting plan.
           </p>
 
-          <div className="mt-14 grid gap-12 md:grid-cols-2 md:gap-0">
+          <h3 className="mt-16 text-lg font-semibold">Templates</h3>
+          <p className="mt-3 max-w-xl text-white/70">
+            3 free templates to start. Single-page templates ($20–$30), multi-page templates ($30–$50) and
+            luxe, detailed templates ($50–$99) are coming soon.
+          </p>
+
+          <h3 className="mt-16 text-lg font-semibold">Who builds it</h3>
+          <div className="mt-6 grid gap-12 md:grid-cols-2 md:gap-0">
             <div className="md:pr-12">
-              <h3 className="text-lg font-semibold">Do it yourself</h3>
+              <h4 className="text-lg font-semibold">Do it yourself</h4>
               <p className="mt-4 font-didone text-6xl">
-                $27<span className="ml-2 align-middle font-sans text-base text-white/70">and up, one-off</span>
+                Included<span className="ml-2 align-middle font-sans text-base text-white/70" />
               </p>
-              <p className="mt-2 text-white/70">then $1 for your first month, $15/month after</p>
               <ul className="mt-8 grid gap-3 text-white/90">
                 {[
                   "Your template, ready in minutes",
                   "Edit everything from your dashboard",
                   "Free yourname.glamsitestudio.com address",
-                  "Hosting, security and updates included",
                 ].map((item) => (
                   <li key={item} className="flex gap-3">
                     <Check className="mt-0.5 size-5 shrink-0 text-petal-deep" aria-hidden />
@@ -209,16 +228,15 @@ export default function HomePage() {
             </div>
 
             <div className="border-white/15 md:border-l md:pl-12">
-              <h3 className="text-lg font-semibold">Done for you</h3>
+              <h4 className="text-lg font-semibold">Done for you</h4>
               <p className="mt-4 font-didone text-6xl">
-                $299<span className="ml-2 align-middle font-sans text-base text-white/70">one-off</span>
+                ${DONE_FOR_YOU_PRICE_CENTS / 100}
+                <span className="ml-2 align-middle font-sans text-base text-white/70">one-off</span>
               </p>
-              <p className="mt-2 text-white/70">plus the same hosting: $1 first month, $15/month after</p>
               <ul className="mt-8 grid gap-3 text-white/90">
                 {[
                   "We add your services, prices, team and photos",
-                  "We connect your own domain",
-                  "A 30-minute call to launch it together",
+                  "A call to launch it together",
                   "Everything in Do it yourself",
                 ].map((item) => (
                   <li key={item} className="flex gap-3">
@@ -236,9 +254,40 @@ export default function HomePage() {
             </div>
           </div>
 
+          <h3 className="mt-16 text-lg font-semibold">Hosting</h3>
+          <div className="mt-6 grid gap-8 md:grid-cols-3">
+            {HOSTING_TIERS.map((tier) => (
+              <div key={tier.value} className="rounded-2xl border border-white/15 p-6">
+                <p className="text-sm font-semibold capitalize text-white/70">{tier.value}</p>
+                <p className="mt-2 font-didone text-5xl">
+                  ${tier.priceDollars}
+                  <span className="ml-2 align-middle font-sans text-base text-white/70">/month</span>
+                </p>
+                <ul className="mt-6 grid gap-3 text-sm text-white/90">
+                  <li className="flex gap-3">
+                    <Check className="mt-0.5 size-5 shrink-0 text-petal-deep" aria-hidden />
+                    {EMAIL_QUOTA_BY_TIER[tier.value]} booking emails a month
+                  </li>
+                  {canCustomizeEmailToggles(tier.value) ? (
+                    <li className="flex gap-3">
+                      <Check className="mt-0.5 size-5 shrink-0 text-petal-deep" aria-hidden />
+                      Choose which emails send
+                    </li>
+                  ) : null}
+                  {hasCampaignsAccess(tier.value) ? (
+                    <li className="flex gap-3">
+                      <Check className="mt-0.5 size-5 shrink-0 text-petal-deep" aria-hidden />
+                      Email campaigns — coming soon
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ))}
+          </div>
+
           <p className="mt-16 border-t border-white/15 pt-6 text-sm text-white/70">
-            Prefer to pay yearly? Hosting is $150 a year. Online booking with deposits and reminders is coming soon as an
-            optional add-on.
+            Prefer to pay yearly? Basic hosting is $150 a year. Online booking with deposits and reminders is coming
+            soon as an optional add-on.
           </p>
         </div>
       </section>

@@ -4,12 +4,14 @@
   "private": true,
   "exports": {
     "./demo": "./src/demo.ts",
+    "./billing": "./src/billing.ts",
     "./booking": "./src/booking.ts",
     "./domain": "./src/domain.ts",
     "./email": "./src/email.ts",
     "./format": "./src/format.ts",
     "./mappers": "./src/mappers.ts",
     "./site-content": "./src/site-content.ts",
+    "./stripe": "./src/stripe.ts",
     "./templates": "./src/templates.ts",
     "./types": "./src/types.ts",
     "./supabase/client": "./src/supabase/client.ts",
@@ -23,7 +25,8 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
-    "@supabase/supabase-js": "^2.112.4"
+    "@supabase/supabase-js": "^2.112.4",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "next": "14.2.5",

@@ -22,7 +22,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
 import { cn } from "@/lib/utils";
-import { createManualAppointment, saveInternalNotes, setAppointmentStatus, type ManualAppointmentInput } from "./actions";
+import { createManualAppointment, markDepositPaid, saveInternalNotes, setAppointmentStatus, type ManualAppointmentInput } from "./actions";
 
 const STATUS_STYLE: Record<AppointmentStatus, string> = {
   pending: "border-amber-200 bg-amber-50 text-amber-800",
@@ -38,6 +38,14 @@ const SHORT_STATUS: Record<AppointmentStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_show: "No-show",
+};
+
+const DEPOSIT_LABEL: Record<Appointment["depositStatus"], string> = {
+  none: "",
+  pending: "Pending",
+  paid: "Paid",
+  refunded: "Refunded",
+  forfeited: "Forfeited",
 };
 
 type Props = {
@@ -240,6 +248,7 @@ export function AppointmentsBoard(props: Props) {
         onClose={() => setSelectedId(null)}
         onStatus={changeStatus}
         onSaveNotes={(item, notes) => run(() => saveInternalNotes(item.id, notes), "Notes saved")}
+        onMarkDepositPaid={(item) => run(() => markDepositPaid(item.id), "Deposit marked as paid")}
       />
 
       <NewAppointmentSheet
@@ -272,6 +281,7 @@ function AppointmentSheet({
   onClose,
   onStatus,
   onSaveNotes,
+  onMarkDepositPaid,
 }: {
   appointment: Appointment | null;
   timeZone: string;
@@ -279,6 +289,7 @@ function AppointmentSheet({
   onClose: () => void;
   onStatus: (item: Appointment, status: AppointmentStatus, message: string) => void;
   onSaveNotes: (item: Appointment, notes: string) => void;
+  onMarkDepositPaid: (item: Appointment) => void;
 }) {
   const [notes, setNotes] = useState("");
   useEffect(() => setNotes(appointment?.internalNotes ?? ""), [appointment?.id, appointment?.internalNotes]);
@@ -315,6 +326,11 @@ function AppointmentSheet({
                 </Detail>
                 {appointment.priceCents != null ? (
                   <Detail label="Price">{formatMoney(appointment.priceCents, appointment.currency)}</Detail>
+                ) : null}
+                {appointment.depositCents > 0 ? (
+                  <Detail label="Deposit">
+                    {formatMoney(appointment.depositCents, appointment.currency)} · {DEPOSIT_LABEL[appointment.depositStatus]}
+                  </Detail>
                 ) : null}
                 <Detail label="Booked">{appointment.source === "online" ? "Online by the client" : "Added by you"}</Detail>
               </dl>
@@ -353,6 +369,11 @@ function AppointmentSheet({
             </div>
 
             <SheetFooter className="mt-auto flex-col gap-2 sm:flex-col">
+              {appointment.depositCents > 0 && (appointment.depositStatus === "pending" || appointment.depositStatus === "none") ? (
+                <Button size="lg" variant="outline" disabled={saving} onClick={() => onMarkDepositPaid(appointment)}>
+                  Mark deposit as paid
+                </Button>
+              ) : null}
               {appointment.status === "pending" ? (
                 <Button size="lg" disabled={saving} onClick={() => onStatus(appointment, "confirmed", "Appointment confirmed")}>
                   Confirm appointment

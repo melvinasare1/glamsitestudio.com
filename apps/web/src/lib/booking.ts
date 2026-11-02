@@ -15,6 +15,7 @@ import {
   bookableWindow,
   bookingRulesFromRow,
   canClientCancel,
+  depositAmountCents,
   formatWhen,
   isYmd,
   pickStaff,
@@ -27,6 +28,7 @@ import {
   type BusyPeriod,
   type Slot,
 } from "@glamsite/shared/booking";
+import { canSendWithinQuota, isEmailTypeEnabled, monthlyEmailQuota, platformFeeCents } from "@glamsite/shared/billing";
 import { siteLink } from "@glamsite/shared/domain";
 import {
   clientBookingEmail,
@@ -37,10 +39,14 @@ import {
   type BookingEmailDetails,
 } from "@glamsite/shared/email";
 import { formatAddress, formatServicePrice } from "@glamsite/shared/format";
+import { getStripe } from "@glamsite/shared/stripe";
 import {
   appointmentFromRow,
+  billingFromRow,
   businessFromRow,
   categoryFromRow,
+  emailNotificationSettingsFromRow,
+  emailUsageFromRow,
   openingHoursFromRow,
   serviceFromRow,
   staffFromRow,
@@ -51,6 +57,8 @@ import { getDashboardUrl, getWebUrl } from "@glamsite/shared/supabase/env";
 import type {
   Appointment,
   Business,
+  EmailNotificationSettings,
+  EmailType,
   OpeningHours,
   Service,
   ServiceCategory,
@@ -230,6 +238,25 @@ export type SlotsResponse =
   | { ok: true; slots: { startsAt: string; date: string; time: string }[]; first: string; last: string }
   | { ok: false; error: string; status: number };
 
+/**
+ * Releases slots held by a Checkout session nobody completed. Called from
+ * both read (getSlots) and write (createBooking) paths instead of a cron —
+ * the `appointments_no_double_booking` exclusion only blocks pending/confirmed
+ * rows, so cancelling here is enough to free the time.
+ */
+async function expirePendingPayments(supabase: SupabaseClient, businessId: string): Promise<void> {
+  const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
+  const { error } = await supabase
+    .from("appointments")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("business_id", businessId)
+    .eq("status", "pending")
+    .eq("deposit_status", "pending")
+    .not("stripe_payment_intent_id", "is", null)
+    .lt("created_at", cutoff);
+  if (error) console.error("[booking] expire pending payments failed", error);
+}
+
 /** Bookable times for a service between two dates (local to the business). */
 export async function getSlots(
   site: BookingSite,
@@ -241,6 +268,7 @@ export async function getSlots(
   const supabase = admin();
   if (!supabase) return { ok: false, error: "Booking isn't available right now.", status: 503 };
   if (!isYmd(from) || !isYmd(to) || to < from) return { ok: false, error: "Choose valid dates.", status: 400 };
+  await expirePendingPayments(supabase, site.business.id);
 
   const service = site.services.find((item) => item.id === serviceId);
   if (!service) return { ok: false, error: "That service can't be booked online.", status: 404 };
@@ -315,7 +343,13 @@ export function parseBookingRequest(
 
 export type BookingOutcome =
   | { ok: true; token: string; status: "pending" | "confirmed" }
+  | { ok: true; checkoutUrl: string }
   | { ok: false; error: string; status: number; code?: "slot_taken" };
+
+function stripeObjectId(value: string | { id: string } | null | undefined): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
 
 const TAKEN: BookingOutcome = {
   ok: false,
@@ -328,6 +362,53 @@ async function ownerEmail(supabase: SupabaseClient, business: Business): Promise
   if (business.email.trim()) return business.email.trim();
   const { data } = await supabase.auth.admin.getUserById(business.ownerId);
   return data.user?.email ?? "";
+}
+
+const DEFAULT_EMAIL_NOTIFICATION_SETTINGS: Omit<EmailNotificationSettings, "businessId"> = {
+  clientBookingConfirmationEnabled: true,
+  ownerBookingConfirmationEnabled: true,
+  clientCancellationEnabled: true,
+  ownerCancellationEnabled: true,
+};
+
+/** "2026-11", matching the `year_month` check constraint on `email_usage`. */
+function currentYearMonth(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+type EmailGate = { yearMonth: string; quota: number; remaining: number; tier: ReturnType<typeof billingFromRow>["hostingTier"]; settings: EmailNotificationSettings };
+
+/** One read of the hosting tier, toggle settings and this month's usage, shared by every send in a request. */
+async function loadEmailGate(supabase: SupabaseClient, businessId: string): Promise<EmailGate> {
+  const yearMonth = currentYearMonth();
+  const [{ data: billingRow }, { data: settingsRow }, { data: usageRow }] = await Promise.all([
+    supabase.from("business_billing").select("*").eq("business_id", businessId).maybeSingle(),
+    supabase.from("email_notification_settings").select("*").eq("business_id", businessId).maybeSingle(),
+    supabase.from("email_usage").select("*").eq("business_id", businessId).eq("year_month", yearMonth).maybeSingle(),
+  ]);
+  const tier = billingRow ? billingFromRow(billingRow).hostingTier : "basic";
+  const settings = settingsRow
+    ? emailNotificationSettingsFromRow(settingsRow)
+    : { businessId, ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
+  const usageCount = usageRow ? emailUsageFromRow(usageRow).sentCount : 0;
+  const quota = monthlyEmailQuota(tier);
+  return { yearMonth, quota, remaining: quota - usageCount, tier, settings };
+}
+
+/**
+ * Which of these email types may actually be sent, in order, consuming one
+ * quota slot per allowed type (the quota applies equally to every type).
+ */
+function allowedEmailTypes(gate: EmailGate, candidates: EmailType[]): Set<EmailType> {
+  const allowed = new Set<EmailType>();
+  let usageCount = gate.quota - gate.remaining;
+  for (const type of candidates) {
+    if (!canSendWithinQuota(usageCount, gate.quota)) break;
+    if (!isEmailTypeEnabled(gate.tier, gate.settings, type)) continue;
+    allowed.add(type);
+    usageCount += 1;
+  }
+  return allowed;
 }
 
 function emailDetails(
@@ -366,11 +447,26 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
   if (!supabase) return { ok: false, error: "Booking isn't available right now.", status: 503 };
 
   const { business, rules } = site;
+  await expirePendingPayments(supabase, business.id);
+
   const service = site.services.find((item) => item.id === request.serviceId);
   if (!service) return { ok: false, error: "That service can't be booked online.", status: 404 };
 
   const staff = eligibleStaff(site, service.id, request.staffId);
   if (!staff.length) return { ok: false, error: "That person isn't taking online bookings for this service.", status: 400 };
+
+  // Collect payment via the salon's own Stripe Connect account when it's
+  // ready to accept charges; otherwise fall back to today's "we'll contact
+  // you to collect it" behavior rather than blocking the booking.
+  const amountCents = depositAmountCents(rules.paymentPolicy, service.priceCents, rules.depositFixedCents);
+  const { data: connectRow } = await supabase
+    .from("business_billing")
+    .select("stripe_connect_account_id, stripe_connect_charges_enabled")
+    .eq("business_id", business.id)
+    .maybeSingle();
+  const connectAccountId = connectRow?.stripe_connect_account_id as string | null;
+  const chargesEnabled = Boolean(connectRow?.stripe_connect_charges_enabled);
+  const collectPayment = Boolean(amountCents && amountCents > 0 && connectAccountId && chargesEnabled);
 
   const timeZone = safeTimeZone(business.timezone);
   const day = zonedParts(new Date(request.startsAt), timeZone).ymd;
@@ -391,7 +487,8 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
     return { ok: false, error: "Couldn't save your details. Please try again.", status: 500 };
   }
   const clientId = clientResult.data as string;
-  const status = rules.autoConfirm ? "confirmed" : "pending";
+  const finalStatus = rules.autoConfirm ? "confirmed" : "pending";
+  const insertStatus = collectPayment ? "pending" : finalStatus;
 
   // "Anyone": try the least busy person first, then the others, in case two
   // clients grab the same person at once.
@@ -415,13 +512,15 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
         service_name: service.name,
         starts_at: slot.startsAt,
         ends_at: slot.endsAt,
-        status,
+        status: insertStatus,
         price_cents: service.priceCents,
         currency: business.currency,
+        deposit_cents: collectPayment ? (amountCents as number) : 0,
+        deposit_status: collectPayment ? "pending" : "none",
         source: "online",
         client_notes: request.notes,
       })
-      .select("manage_token")
+      .select("id, manage_token")
       .single();
 
     if (error) {
@@ -431,29 +530,102 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
     }
 
     const token = data.manage_token as string;
+
+    if (collectPayment) {
+      try {
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.create({
+          mode: "payment",
+          customer_email: request.email,
+          line_items: [
+            {
+              price_data: {
+                currency: business.currency.toLowerCase(),
+                product_data: { name: `${service.name} at ${business.name}` },
+                unit_amount: amountCents as number,
+              },
+              quantity: 1,
+            },
+          ],
+          payment_intent_data: {
+            application_fee_amount: platformFeeCents(amountCents as number),
+            transfer_data: { destination: connectAccountId as string },
+          },
+          metadata: { appointmentId: data.id, finalStatus },
+          success_url: siteLink(business, `/appointment/${token}`, getWebUrl()),
+          cancel_url: siteLink(business, "/book", getWebUrl()),
+        });
+        if (!session.url) throw new Error("Checkout session has no url");
+        await supabase
+          .from("appointments")
+          .update({ stripe_payment_intent_id: stripeObjectId(session.payment_intent) })
+          .eq("id", data.id);
+        return { ok: true, checkoutUrl: session.url };
+      } catch (error) {
+        console.error("[booking] Connect checkout session failed", error);
+        await supabase
+          .from("appointments")
+          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .eq("id", data.id);
+        return { ok: false, error: "Couldn't start payment. Please try again.", status: 500 };
+      }
+    }
+
     const staffName = site.staff.find((person) => person.id === staffId)?.name ?? null;
-    const details = emailDetails(
+    await sendBookingConfirmationEmails(
+      supabase,
       business,
       rules,
       { serviceName: service.name, startsAt: slot.startsAt, staffName, priceCents: service.priceCents, clientNotes: request.notes },
       { name: request.name, email: request.email, phone: request.phone },
-      status,
+      finalStatus,
       token,
       service.priceIsFrom
     );
-    const dashboardUrl = `${getDashboardUrl()}/appointments`;
-    const toClient = clientBookingEmail(details);
-    const toOwner = ownerNewBookingEmail(details, dashboardUrl);
-    const owner = await ownerEmail(supabase, business);
-    await Promise.allSettled([
-      sendEmail({ to: request.email, ...toClient, fromName: business.name, replyTo: business.email }),
-      owner ? sendEmail({ to: owner, ...toOwner, replyTo: request.email }) : Promise.resolve(false),
-    ]);
 
-    return { ok: true, token, status };
+    return { ok: true, token, status: finalStatus };
   }
 
   return TAKEN;
+}
+
+/**
+ * Builds and sends the client/owner booking-confirmation emails, respecting
+ * the hosting tier's toggles and monthly quota. Shared by createBooking()
+ * (paid at the salon, or no payment collected) and the Stripe webhook's
+ * confirmBookingPayment() (paid online via Checkout).
+ */
+export async function sendBookingConfirmationEmails(
+  supabase: SupabaseClient,
+  business: Business,
+  rules: BookingRules,
+  appointment: Pick<Appointment, "serviceName" | "startsAt" | "staffName" | "priceCents" | "clientNotes">,
+  client: { name: string; email: string; phone: string },
+  status: "pending" | "confirmed",
+  token: string,
+  priceIsFrom = false
+): Promise<void> {
+  const details = emailDetails(business, rules, appointment, client, status, token, priceIsFrom);
+  const dashboardUrl = `${getDashboardUrl()}/appointments`;
+  const toClient = clientBookingEmail(details);
+  const toOwner = ownerNewBookingEmail(details, dashboardUrl);
+  const owner = await ownerEmail(supabase, business);
+  const candidates: EmailType[] = owner
+    ? ["clientBookingConfirmation", "ownerBookingConfirmation"]
+    : ["clientBookingConfirmation"];
+  const gate = await loadEmailGate(supabase, business.id);
+  const allowed = allowedEmailTypes(gate, candidates);
+  const attempts: Promise<unknown>[] = [];
+  if (allowed.has("clientBookingConfirmation")) {
+    attempts.push(sendEmail({ to: client.email, ...toClient, fromName: business.name, replyTo: business.email }));
+  }
+  if (allowed.has("ownerBookingConfirmation")) {
+    attempts.push(sendEmail({ to: owner, ...toOwner, replyTo: client.email }));
+  }
+  await Promise.allSettled(attempts);
+  if (attempts.length) {
+    await supabase.rpc("increment_email_usage", { p_business_id: business.id, p_year_month: gate.yearMonth, p_count: attempts.length });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -524,19 +696,30 @@ export async function cancelByToken(token: string): Promise<{ ok: true } | { ok:
   const client = appointment.client ?? { name: "", email: "", phone: "" };
   const details = emailDetails(business, rules, appointment, client, "cancelled", token);
   const owner = await ownerEmail(supabase, business);
-  await Promise.allSettled([
-    client.email
-      ? sendEmail({
-          to: client.email,
-          ...clientCancelledEmail(details, false, siteLink(business, "/book", getWebUrl())),
-          fromName: business.name,
-          replyTo: business.email,
-        })
-      : Promise.resolve(false),
-    owner
-      ? sendEmail({ to: owner, ...ownerClientCancelledEmail(details, `${getDashboardUrl()}/appointments`) })
-      : Promise.resolve(false),
-  ]);
+  const candidates: EmailType[] = [
+    ...(client.email ? (["clientCancellation"] as const) : []),
+    ...(owner ? (["ownerCancellation"] as const) : []),
+  ];
+  const gate = await loadEmailGate(supabase, business.id);
+  const allowed = allowedEmailTypes(gate, candidates);
+  const attempts: Promise<unknown>[] = [];
+  if (allowed.has("clientCancellation")) {
+    attempts.push(
+      sendEmail({
+        to: client.email,
+        ...clientCancelledEmail(details, false, siteLink(business, "/book", getWebUrl())),
+        fromName: business.name,
+        replyTo: business.email,
+      })
+    );
+  }
+  if (allowed.has("ownerCancellation")) {
+    attempts.push(sendEmail({ to: owner, ...ownerClientCancelledEmail(details, `${getDashboardUrl()}/appointments`) }));
+  }
+  await Promise.allSettled(attempts);
+  if (attempts.length) {
+    await supabase.rpc("increment_email_usage", { p_business_id: business.id, p_year_month: gate.yearMonth, p_count: attempts.length });
+  }
 
   return { ok: true };
 }

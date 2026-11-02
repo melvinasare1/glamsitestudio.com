@@ -78,6 +78,7 @@ Supabase project; **Preview** and **Development** values point at staging.
 | `STRIPE_SECRET_KEY` | stage 3 | stage 3 | Sensitive. Test key on Preview |
 | `STRIPE_WEBHOOK_SECRET` | stage 3 | — | Sensitive. One per environment |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | stage 3 | stage 3 | |
+| `PLATFORM_FEE_BPS` | stage 5 | — | Optional, basis points (1% = 100), default 100. Booking Checkout + webhook only run on web |
 
 `ANSAA_MOMO_*` and `HUBTEL_*` are Ansaa leftovers and are not set; they are
 removed with MoMo billing in stage 2.
@@ -85,8 +86,31 @@ removed with MoMo billing in stage 2.
 ## Stripe (stage 3)
 
 - Test mode on Preview and Development, live mode on Production only.
-- Products: five template prices ($27 to $97), done-for-you setup ($299),
-  hosting ($15/month, $150/year), booking add-on (about $24/month).
-- Coupon: $14 off, duration once, applied to hosting at checkout.
-- Webhook endpoint on the web app: `/api/stripe/webhook`.
+- No Products or Prices to create by hand: the dashboard's Checkout Session
+  builds line items inline with `price_data` (see
+  `packages/shared/src/stripe.ts` and `apps/dashboard/src/app/signup/actions.ts`).
+- Hosting, recurring monthly, chosen at sign-up: Basic $15, Popular $30,
+  Premium $60 (`HOSTING_TIER_PRICE_CENTS` in `packages/shared/src/billing.ts`,
+  also the source for each tier's email quota). Done-for-you setup is a $99
+  one-off line item, added only when chosen.
+- Coupon: $1 for the first month of hosting, duration once. One coupon per
+  hosting tier price, auto-created on first use with a deterministic id
+  (`getOrCreateFirstMonthCoupon`) — nothing to set up in the Stripe dashboard.
+- `checkout.session.completed` creates the business, `business_billing`,
+  `booking_settings` and `email_notification_settings` rows, and invites the
+  owner by email (Supabase `inviteUserByEmail`); `customer.subscription.updated`
+  and `.deleted` keep `subscription_status` and `current_period_end` in sync.
+  Webhook endpoint, on the web app: `/api/stripe/webhook`.
+- Customer Portal: the billing page's "Manage billing" button opens it
+  directly against the business's `stripe_customer_id`.
 - Connect (stage 5): Express accounts; salons onboard from the dashboard.
+  Our cut of a booking payment is Stripe's `application_fee_amount` on a
+  destination charge, computed by `platformFeeCents()` in
+  `packages/shared/src/billing.ts` from `PLATFORM_FEE_BPS` (default 100 =
+  1%) — change the rate by updating the env var, no redeploy needed.
+- Connect webhook setup: Express account events (`account.updated`) only
+  reach `/api/stripe/webhook` if "Listen to events on connected accounts"
+  is enabled for that endpoint in the Stripe Dashboard (or, for local
+  testing, `stripe listen --forward-connect-to localhost:3000/api/stripe/webhook`
+  alongside the regular `--forward-to`). Easy to miss — without it,
+  `stripe_connect_charges_enabled` never flips to true.

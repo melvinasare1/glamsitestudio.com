@@ -30,5 +30,8 @@ export async function POST(req: NextRequest) {
   if (!outcome.ok) {
     return NextResponse.json({ error: outcome.error, code: outcome.code }, { status: outcome.status });
   }
+  if ("checkoutUrl" in outcome) {
+    return NextResponse.json({ ok: true, checkoutUrl: outcome.checkoutUrl }, { status: 200 });
+  }
   return NextResponse.json({ ok: true, token: outcome.token, status: outcome.status }, { status: 201 });
 }

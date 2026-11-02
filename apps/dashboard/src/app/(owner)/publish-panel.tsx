@@ -1,16 +1,63 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { ExternalLinkIcon } from "lucide-react";
 import { Panel } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { useBusiness } from "@/lib/business-context";
 import { useAction } from "@/lib/use-action";
 import { setPublished } from "./actions";
+import { startLaunchCheckout } from "./billing/actions";
 
-export function PublishPanel({ ready }: { ready: boolean }) {
+/**
+ * Before the first payment: a "Launch" CTA instead of "Publish" — the only
+ * thing gated on payment. Everything else in the dashboard is open from
+ * sign-up. After launch, publish/unpublish is free, same as before.
+ */
+export function PublishPanel({ ready, launched }: { ready: boolean; launched: boolean }) {
   const { business, siteUrl } = useBusiness();
   const { pending, run } = useAction();
+  const [launchPending, startLaunchTransition] = useTransition();
+  const [launchError, setLaunchError] = useState<string | null>(null);
   const live = business.status === "live";
+
+  if (!launched) {
+    return (
+      <Panel
+        title="Launch your site"
+        description={
+          ready
+            ? "Everything essential is in place. Launch when you're happy — $1 for your first month of hosting."
+            : "Finish the essentials below, or launch now and keep editing. $1 for your first month of hosting."
+        }
+        actions={
+          <Button
+            size="lg"
+            disabled={launchPending}
+            onClick={() => {
+              setLaunchError(null);
+              startLaunchTransition(async () => {
+                const result = await startLaunchCheckout();
+                if (!result.ok) {
+                  setLaunchError(result.error);
+                  return;
+                }
+                window.location.href = result.url;
+              });
+            }}
+          >
+            {launchPending ? "Taking you to payment…" : "Launch — $1 first month"}
+          </Button>
+        }
+      >
+        <p className="text-sm">
+          Your site will be at <span className="font-medium">{siteUrl.replace(/^https:\/\//, "")}</span> once it's
+          live. Nobody can see it until then.
+        </p>
+        {launchError ? <p className="mt-2 text-sm text-destructive">{launchError}</p> : null}
+      </Panel>
+    );
+  }
 
   return (
     <Panel

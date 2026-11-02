@@ -43,12 +43,52 @@ export type SubscriptionStatus =
   | "unpaid"
   | "incomplete";
 
+export type HostingTier = "basic" | "popular" | "premium";
+
 export type BusinessBilling = {
   businessId: string;
-  plan: "diy" | "done_for_you";
+  designService: "diy" | "done_for_you";
+  hostingTier: HostingTier;
   subscriptionStatus: SubscriptionStatus;
   bookingAddon: boolean;
   currentPeriodEnd: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeConnectAccountId: string | null;
+  stripeConnectChargesEnabled: boolean;
+};
+
+/** One member per Resend template in `email.ts`; a future "reminder" slots in the same way. */
+export type EmailType =
+  | "clientBookingConfirmation"
+  | "ownerBookingConfirmation"
+  | "clientCancellation"
+  | "ownerCancellation";
+
+export type EmailNotificationSettings = {
+  businessId: string;
+  clientBookingConfirmationEnabled: boolean;
+  ownerBookingConfirmationEnabled: boolean;
+  clientCancellationEnabled: boolean;
+  ownerCancellationEnabled: boolean;
+};
+
+/** One row per business per calendar month ("2026-11"); rolls over for free. */
+export type EmailUsage = {
+  businessId: string;
+  yearMonth: string;
+  sentCount: number;
+};
+
+export type TemplatePriceTier = "single_page" | "regular" | "luxe";
+
+export type Template = {
+  id: string;
+  name: string;
+  priceCents: number | null;
+  priceTier: TemplatePriceTier | null;
+  isActive: boolean;
+  position: number;
 };
 
 export type ServiceCategory = {
