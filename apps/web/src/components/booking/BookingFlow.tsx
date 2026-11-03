@@ -6,6 +6,7 @@ import Image from "next/image";
 import { addDays, depositAmountCents, formatDayLong, formatDayShort, staffForService, type PaymentPolicy } from "@glamsite/shared/booking";
 import { formatDuration, formatMoney, formatServicePrice, formatTime, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory } from "@glamsite/shared/types";
+import { track } from "@/lib/track";
 
 type Person = {
   id: string;
@@ -41,7 +42,15 @@ type Props = {
 /** How many days of times we ask for at once. */
 const PAGE_DAYS = 28;
 
-type Details = { name: string; email: string; phone: string; notes: string; agreed: boolean; website: string };
+type Details = {
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  discountCode: string;
+  agreed: boolean;
+  website: string;
+};
 
 type Done = { token: string; status: "pending" | "confirmed"; slot: SlotOption; serviceId: string; staffName: string | null };
 
@@ -110,7 +119,15 @@ export function BookingFlow(props: Props) {
   /** The first day of the 7-day window shown in step 3. */
   const [weekStart, setWeekStart] = useState<string | null>(null);
 
-  const [details, setDetails] = useState<Details>({ name: "", email: "", phone: "", notes: "", agreed: false, website: "" });
+  const [details, setDetails] = useState<Details>({
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+    discountCode: "",
+    agreed: false,
+    website: "",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
@@ -243,6 +260,7 @@ export function BookingFlow(props: Props) {
           email: details.email,
           phone: details.phone,
           notes: details.notes,
+          discountCode: details.discountCode,
           website: details.website,
         }),
       });
@@ -254,6 +272,7 @@ export function BookingFlow(props: Props) {
         code?: string;
       };
       if (response.ok && body.checkoutUrl) {
+        track("checkout_started", { slug: props.slug, serviceId: service.id });
         window.location.href = body.checkoutUrl;
         return;
       }
@@ -363,6 +382,7 @@ export function BookingFlow(props: Props) {
                           onClick={() => {
                             setServiceId(item.id);
                             setStaffChoice(null);
+                            track("booking_started", { slug: props.slug, serviceId: item.id });
                           }}
                           className="group flex w-full items-start justify-between gap-4 py-4 text-left"
                         >
@@ -571,7 +591,21 @@ export function BookingFlow(props: Props) {
                 />
 
                 {paymentNotice ? (
-                  <p className="rounded-xl bg-[#f7f4f2] px-4 py-3 text-sm text-[#4a4145]">{paymentNotice}</p>
+                  <>
+                    <p className="rounded-xl bg-[#f7f4f2] px-4 py-3 text-sm text-[#4a4145]">{paymentNotice}</p>
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="font-medium">
+                        Discount code <span className="font-normal text-[#6e6468]">(optional)</span>
+                      </span>
+                      <input
+                        type="text"
+                        maxLength={40}
+                        value={details.discountCode}
+                        onChange={(event) => setDetails((d) => ({ ...d, discountCode: event.target.value }))}
+                        className="rounded-xl border border-[#d9d1cd] px-4 py-3 text-base outline-none focus:border-[#1f1a1c] sm:max-w-xs"
+                      />
+                    </label>
+                  </>
                 ) : null}
 
                 {props.policyText.trim() ? (

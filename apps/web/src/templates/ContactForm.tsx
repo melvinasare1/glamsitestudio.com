@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@/lib/track";
 
 /** Shared by every template. Posts to /api/contact, which files it under the business's enquiries. */
 export function ContactForm({ slug, demo = false }: { slug: string; demo?: boolean }) {
@@ -27,6 +28,7 @@ export function ContactForm({ slug, demo = false }: { slug: string; demo?: boole
         throw new Error(body.error ?? "Could not send your message.");
       }
       setState("sent");
+      track("enquiry_submitted", { slug });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send your message.");
       setState("idle");

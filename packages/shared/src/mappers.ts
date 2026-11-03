@@ -11,7 +11,10 @@ import type {
   BusinessBilling,
   BookingMode,
   BusinessStatus,
+  Client,
   DepositStatus,
+  DiscountCode,
+  DiscountKind,
   EmailNotificationSettings,
   EmailUsage,
   Enquiry,
@@ -37,6 +40,11 @@ const int = (value: unknown, fallback = 0): number =>
 const intOrNull = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : null;
 const strOrNull = (value: unknown): string | null => (typeof value === "string" && value ? value : null);
+/** `numeric` columns come back from PostgREST as strings (to avoid float precision loss), so parse rather than type-check. */
+const floatOrNull = (value: unknown): number | null => {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
@@ -68,6 +76,7 @@ export function businessFromRow(row: Row): Business {
     },
     timezone: str(row.timezone, "Europe/London"),
     currency: str(row.currency, "GBP"),
+    taxRatePercent: floatOrNull(row.tax_rate_percent),
     bookingMode: oneOf<BookingMode>(row.booking_mode, ["none", "link", "glamsite"], "none"),
     bookingUrl: str(row.booking_url),
     content: parseSiteContent(row.content),
@@ -182,6 +191,19 @@ export function openingHoursFromRow(row: Row): OpeningHours {
   };
 }
 
+export function clientFromRow(row: Row): Client {
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    name: str(row.name),
+    email: str(row.email),
+    phone: str(row.phone),
+    notes: str(row.notes),
+    createdAt: str(row.created_at),
+    updatedAt: str(row.updated_at),
+  };
+}
+
 export function enquiryFromRow(row: Row): Enquiry {
   return {
     id: str(row.id),
@@ -228,8 +250,29 @@ export function appointmentFromRow(row: Row): Appointment {
     cancelledAt: strOrNull(row.cancelled_at),
     cancelledBy: row.cancelled_by === "client" || row.cancelled_by === "business" ? row.cancelled_by : null,
     createdAt: str(row.created_at),
+    discountCode: strOrNull(row.discount_code),
+    discountCents: int(row.discount_cents),
+    refundCents: int(row.refund_cents),
+    refundedAt: strOrNull(row.refunded_at),
     client: client ? { name: str(client.name), email: str(client.email), phone: str(client.phone) } : null,
     staffName: staff ? str(staff.name) : null,
+  };
+}
+
+export function discountCodeFromRow(row: Row): DiscountCode {
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    code: str(row.code),
+    kind: oneOf<DiscountKind>(row.kind, ["percent", "fixed"], "percent"),
+    percentOff: intOrNull(row.percent_off),
+    amountOffCents: intOrNull(row.amount_off_cents),
+    isActive: bool(row.is_active, true),
+    maxRedemptions: intOrNull(row.max_redemptions),
+    redemptionCount: int(row.redemption_count),
+    expiresAt: strOrNull(row.expires_at),
+    createdAt: str(row.created_at),
+    updatedAt: str(row.updated_at),
   };
 }
 

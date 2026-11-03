@@ -48,8 +48,9 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   but nothing stops someone filling a diary with fake bookings. Trigger: the
   first abuse, or before 10 live sites take bookings.
 - **Losing a booking race leaves a client record** with no appointment (the
-  client is saved before the time is claimed). Harmless; tidy up when a
-  client list page is built.
+  client is saved before the time is claimed). Now visible as a "0 visits"
+  row on the Customers page. Harmless; hide or clean up these rows if they
+  turn out to be common enough to be noisy.
 - **The booking page uses neutral colours** when an owner hasn't picked
   brand colours, not each template's own palette. Trigger: the second
   template design.

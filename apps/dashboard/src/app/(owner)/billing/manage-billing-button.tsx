@@ -26,7 +26,7 @@ export function ManageBillingButton() {
 
   return (
     <div className="mt-5">
-      <Button variant="outline" disabled={pending} onClick={onClick}>
+      <Button variant="outline" loading={pending} onClick={onClick}>
         {pending ? "Opening billing…" : "Manage billing"}
       </Button>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}

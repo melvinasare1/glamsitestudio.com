@@ -137,6 +137,41 @@ export async function markDepositPaid(id: string): Promise<ActionResult> {
   return done();
 }
 
+/**
+ * Owner notes that they refunded a client (done directly in Stripe or the
+ * Connect dashboard — this doesn't call Stripe itself). Lets the Finance
+ * page's totals reflect what actually went back out. Capped at what the
+ * client paid, so refunds can't inflate a business's reported losses.
+ */
+export async function recordRefund(id: string, refundCents: number): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+  const { supabase, business } = ctx;
+  if (!Number.isFinite(refundCents) || refundCents <= 0) return fail("Enter an amount greater than zero.");
+
+  const { data: current, error: readError } = await supabase
+    .from("appointments")
+    .select("deposit_cents, deposit_status")
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  if (readError) return dbError("read appointment", readError);
+  if (!current) return fail("That appointment no longer exists.");
+  if (current.deposit_status !== "paid") return fail("Only a paid deposit can be refunded.");
+
+  const amount = Math.round(refundCents);
+  if (amount > (current.deposit_cents as number)) return fail("That's more than the client paid.");
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({ deposit_status: "refunded", refund_cents: amount, refunded_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .eq("deposit_status", "paid");
+  if (error) return dbError("record refund", error);
+  return done();
+}
+
 export async function saveInternalNotes(id: string, notes: string): Promise<ActionResult> {
   const ctx = await ownerContext();
   if (!ctx.ok) return ctx;

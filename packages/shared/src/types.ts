@@ -26,6 +26,8 @@ export type Business = {
   address: Address;
   timezone: string;
   currency: string;
+  /** General estimated tax rate shown on the Finance page. Informational only — never applied to a Stripe charge. Null if the owner hasn't set one. */
+  taxRatePercent: number | null;
   bookingMode: BookingMode;
   bookingUrl: string;
   content: SiteContent;
@@ -142,6 +144,19 @@ export type OpeningHours = {
   closesAt: string;
 };
 
+/** A person who's booked, or been added manually. Matched by email per business. */
+export type Client = {
+  id: string;
+  businessId: string;
+  name: string;
+  email: string;
+  phone: string;
+  /** Owner-only, never shown to the client. */
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Enquiry = {
   id: string;
   businessId: string;
@@ -191,10 +206,38 @@ export type Appointment = {
   cancelledAt: string | null;
   cancelledBy: "client" | "business" | null;
   createdAt: string;
+  /** The code the client entered, if any. Null means no discount was applied. */
+  discountCode: string | null;
+  /** How much was taken off because of discountCode. 0 when discountCode is null. */
+  discountCents: number;
+  /** What was actually given back to the client. Recorded by the owner, not fetched from Stripe. 0 means no refund. */
+  refundCents: number;
+  refundedAt: string | null;
   /** Embedded when the query selects `clients(name, email, phone)`. */
   client: { name: string; email: string; phone: string } | null;
   /** Embedded when the query selects `staff(name)`. */
   staffName: string | null;
+};
+
+export type DiscountKind = "percent" | "fixed";
+
+/** A promo code an owner creates; a client enters it at checkout. */
+export type DiscountCode = {
+  id: string;
+  businessId: string;
+  code: string;
+  kind: DiscountKind;
+  /** Set when kind is "percent", 1-100. Null when kind is "fixed". */
+  percentOff: number | null;
+  /** Set when kind is "fixed". Null when kind is "percent". */
+  amountOffCents: number | null;
+  isActive: boolean;
+  /** null = unlimited. */
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 /** One stretch of a team member's weekly working time ("HH:MM", local). */

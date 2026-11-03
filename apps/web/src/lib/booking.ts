@@ -53,6 +53,7 @@ import {
   workingHoursFromRow,
 } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
+import { trackServer } from "@/lib/server-track";
 import { getDashboardUrl, getWebUrl } from "@glamsite/shared/supabase/env";
 import type {
   Appointment,
@@ -292,6 +293,8 @@ export async function getSlots(
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Matches the `code` check constraint on discount_codes. */
+const DISCOUNT_CODE_RE = /^[A-Za-z0-9-]{1,40}$/;
 
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
@@ -306,6 +309,8 @@ export type BookingRequest = {
   email: string;
   phone: string;
   notes: string;
+  /** A code the client typed in, if any. Only meaningful when payment is due. */
+  discountCode: string | null;
 };
 
 function text(value: unknown, max: number): string {
@@ -327,6 +332,7 @@ export function parseBookingRequest(
   const email = text(body.email, 254).toLowerCase();
   const phone = text(body.phone, 40);
   const notes = text(body.notes, 1000);
+  const discountCodeRaw = text(body.discountCode, 40);
 
   if (!slug || !isUuid(serviceId)) return { ok: false, error: "Choose a service." };
   if (staffRaw && !isUuid(staffRaw)) return { ok: false, error: "Choose who you'd like to see." };
@@ -334,17 +340,28 @@ export function parseBookingRequest(
   if (!name) return { ok: false, error: "Please enter your name." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
   if (phone.replace(/\D/g, "").length < 7) return { ok: false, error: "Please enter a phone number." };
+  if (discountCodeRaw && !DISCOUNT_CODE_RE.test(discountCodeRaw)) return { ok: false, error: "That code isn't valid." };
 
   return {
     ok: true,
-    data: { slug, serviceId, staffId: staffRaw || null, startsAt: new Date(startsAt).toISOString(), name, email, phone, notes },
+    data: {
+      slug,
+      serviceId,
+      staffId: staffRaw || null,
+      startsAt: new Date(startsAt).toISOString(),
+      name,
+      email,
+      phone,
+      notes,
+      discountCode: discountCodeRaw || null,
+    },
   };
 }
 
 export type BookingOutcome =
   | { ok: true; token: string; status: "pending" | "confirmed" }
   | { ok: true; checkoutUrl: string }
-  | { ok: false; error: string; status: number; code?: "slot_taken" };
+  | { ok: false; error: string; status: number; code?: "slot_taken" | "invalid_discount" };
 
 function stripeObjectId(value: string | { id: string } | null | undefined): string | null {
   if (!value) return null;
@@ -357,6 +374,58 @@ const TAKEN: BookingOutcome = {
   status: 409,
   code: "slot_taken",
 };
+
+type DiscountMatch = { id: string; code: string; discountCents: number; redemptionCount: number };
+
+/**
+ * Looks up a code for this business and checks it's usable right now. Codes
+ * are letters/numbers/hyphens only (see the `code` check constraint), so a
+ * plain case-insensitive `ilike` is a safe exact match — no wildcard
+ * characters to worry about escaping.
+ */
+async function validateDiscountCode(
+  supabase: SupabaseClient,
+  businessId: string,
+  rawCode: string,
+  amountCents: number
+): Promise<{ ok: true; match: DiscountMatch } | { ok: false; error: string }> {
+  const { data: row, error } = await supabase
+    .from("discount_codes")
+    .select("*")
+    .eq("business_id", businessId)
+    .ilike("code", rawCode)
+    .maybeSingle();
+  if (error || !row) return { ok: false, error: "That code isn't valid." };
+  if (!row.is_active) return { ok: false, error: "That code isn't valid." };
+  if (row.expires_at && new Date(row.expires_at as string).getTime() < Date.now()) {
+    return { ok: false, error: "That code has expired." };
+  }
+  const redemptionCount = row.redemption_count as number;
+  const maxRedemptions = row.max_redemptions as number | null;
+  if (maxRedemptions != null && redemptionCount >= maxRedemptions) {
+    return { ok: false, error: "That code has reached its limit." };
+  }
+  const discountCents =
+    row.kind === "percent"
+      ? Math.round((amountCents * (row.percent_off as number)) / 100)
+      : Math.min(amountCents, row.amount_off_cents as number);
+  return { ok: true, match: { id: row.id as string, code: row.code as string, discountCents, redemptionCount } };
+}
+
+/**
+ * Best-effort redemption count. The `eq("redemption_count", ...)` guard
+ * makes a lost race harmless (it just fails silently) rather than letting a
+ * code go over its limit; worth revisiting with a database function if
+ * discount codes get heavy concurrent use.
+ */
+async function redeemDiscountCode(supabase: SupabaseClient, match: DiscountMatch): Promise<void> {
+  const { error } = await supabase
+    .from("discount_codes")
+    .update({ redemption_count: match.redemptionCount + 1 })
+    .eq("id", match.id)
+    .eq("redemption_count", match.redemptionCount);
+  if (error) console.error("[booking] discount redemption count failed", error);
+}
 
 async function ownerEmail(supabase: SupabaseClient, business: Business): Promise<string> {
   if (business.email.trim()) return business.email.trim();
@@ -466,7 +535,18 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
     .maybeSingle();
   const connectAccountId = connectRow?.stripe_connect_account_id as string | null;
   const chargesEnabled = Boolean(connectRow?.stripe_connect_charges_enabled);
-  const collectPayment = Boolean(amountCents && amountCents > 0 && connectAccountId && chargesEnabled);
+  const wouldCollect = Boolean(amountCents && amountCents > 0 && connectAccountId && chargesEnabled);
+
+  let discountMatch: DiscountMatch | null = null;
+  if (wouldCollect && request.discountCode) {
+    const validated = await validateDiscountCode(supabase, business.id, request.discountCode, amountCents as number);
+    if (!validated.ok) return { ok: false, error: validated.error, status: 400, code: "invalid_discount" };
+    discountMatch = validated.match;
+  }
+  const discountCents = discountMatch?.discountCents ?? 0;
+  // null stays null (nothing was ever due); otherwise never below zero.
+  const finalAmountCents = amountCents == null ? null : Math.max(0, amountCents - discountCents);
+  const collectPayment = Boolean(finalAmountCents && finalAmountCents > 0 && connectAccountId && chargesEnabled);
 
   const timeZone = safeTimeZone(business.timezone);
   const day = zonedParts(new Date(request.startsAt), timeZone).ymd;
@@ -515,10 +595,12 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
         status: insertStatus,
         price_cents: service.priceCents,
         currency: business.currency,
-        deposit_cents: collectPayment ? (amountCents as number) : 0,
+        deposit_cents: collectPayment ? (finalAmountCents as number) : 0,
         deposit_status: collectPayment ? "pending" : "none",
         source: "online",
         client_notes: request.notes,
+        discount_code: discountMatch?.code ?? null,
+        discount_cents: discountCents,
       })
       .select("id, manage_token")
       .single();
@@ -530,6 +612,13 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
     }
 
     const token = data.manage_token as string;
+    if (discountMatch) await redeemDiscountCode(supabase, discountMatch);
+    void trackServer(business.id, "booking_created", {
+      serviceId: service.id,
+      collectPayment,
+      priceCents: service.priceCents,
+      discountCents,
+    });
 
     if (collectPayment) {
       try {
@@ -542,13 +631,13 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
               price_data: {
                 currency: business.currency.toLowerCase(),
                 product_data: { name: `${service.name} at ${business.name}` },
-                unit_amount: amountCents as number,
+                unit_amount: finalAmountCents as number,
               },
               quantity: 1,
             },
           ],
           payment_intent_data: {
-            application_fee_amount: platformFeeCents(amountCents as number),
+            application_fee_amount: platformFeeCents(finalAmountCents as number),
             transfer_data: { destination: connectAccountId as string },
           },
           metadata: { appointmentId: data.id, finalStatus },

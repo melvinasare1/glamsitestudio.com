@@ -24,6 +24,7 @@ export function DetailsForm({ business }: { business: Business }) {
     country: business.address.country,
     timezone: business.timezone,
     currency: business.currency,
+    taxRatePercent: business.taxRatePercent == null ? "" : String(business.taxRatePercent),
   });
   const set = (key: keyof DetailsInput) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const text = (key: keyof DetailsInput, label: string, extra: React.ComponentProps<typeof Input> = {}) => (
@@ -86,8 +87,14 @@ export function DetailsForm({ business }: { business: Business }) {
         </div>
       </Panel>
 
+      <Panel title="Tax" description="A general estimate shown on your Finance page. Not applied to payments — set this to whatever you report to your tax authority.">
+        <div className="grid gap-5 md:grid-cols-2">
+          {text("taxRatePercent", "Tax rate (%)", { type: "number", min: 0, max: 100, step: "0.01", inputMode: "decimal" })}
+        </div>
+      </Panel>
+
       <div>
-        <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save details"}</Button>
+        <Button type="submit" size="lg" loading={pending}>{pending ? "Saving…" : "Save details"}</Button>
       </div>
     </form>
   );

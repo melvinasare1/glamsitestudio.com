@@ -22,7 +22,14 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
 import { cn } from "@/lib/utils";
-import { createManualAppointment, markDepositPaid, saveInternalNotes, setAppointmentStatus, type ManualAppointmentInput } from "./actions";
+import {
+  createManualAppointment,
+  markDepositPaid,
+  recordRefund,
+  saveInternalNotes,
+  setAppointmentStatus,
+  type ManualAppointmentInput,
+} from "./actions";
 
 const STATUS_STYLE: Record<AppointmentStatus, string> = {
   pending: "border-amber-200 bg-amber-50 text-amber-800",
@@ -249,6 +256,7 @@ export function AppointmentsBoard(props: Props) {
         onStatus={changeStatus}
         onSaveNotes={(item, notes) => run(() => saveInternalNotes(item.id, notes), "Notes saved")}
         onMarkDepositPaid={(item) => run(() => markDepositPaid(item.id), "Deposit marked as paid")}
+        onRecordRefund={(item, amountCents) => run(() => recordRefund(item.id, amountCents), "Refund recorded")}
       />
 
       <NewAppointmentSheet
@@ -282,6 +290,7 @@ function AppointmentSheet({
   onStatus,
   onSaveNotes,
   onMarkDepositPaid,
+  onRecordRefund,
 }: {
   appointment: Appointment | null;
   timeZone: string;
@@ -290,9 +299,16 @@ function AppointmentSheet({
   onStatus: (item: Appointment, status: AppointmentStatus, message: string) => void;
   onSaveNotes: (item: Appointment, notes: string) => void;
   onMarkDepositPaid: (item: Appointment) => void;
+  onRecordRefund: (item: Appointment, amountCents: number) => void;
 }) {
   const [notes, setNotes] = useState("");
+  const [refunding, setRefunding] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
   useEffect(() => setNotes(appointment?.internalNotes ?? ""), [appointment?.id, appointment?.internalNotes]);
+  useEffect(() => {
+    setRefunding(false);
+    setRefundAmount(appointment ? (appointment.depositCents / 100).toFixed(2) : "");
+  }, [appointment?.id]);
 
   const started = appointment ? new Date(appointment.startsAt).getTime() <= Date.now() : false;
   const day = appointment ? zonedParts(new Date(appointment.startsAt), timeZone).ymd : "";
@@ -331,6 +347,9 @@ function AppointmentSheet({
                   <Detail label="Deposit">
                     {formatMoney(appointment.depositCents, appointment.currency)} · {DEPOSIT_LABEL[appointment.depositStatus]}
                   </Detail>
+                ) : null}
+                {appointment.refundCents > 0 ? (
+                  <Detail label="Refunded">{formatMoney(appointment.refundCents, appointment.currency)}</Detail>
                 ) : null}
                 <Detail label="Booked">{appointment.source === "online" ? "Online by the client" : "Added by you"}</Detail>
               </dl>
@@ -373,6 +392,39 @@ function AppointmentSheet({
                 <Button size="lg" variant="outline" disabled={saving} onClick={() => onMarkDepositPaid(appointment)}>
                   Mark deposit as paid
                 </Button>
+              ) : null}
+              {appointment.depositCents > 0 && appointment.depositStatus === "paid" ? (
+                refunding ? (
+                  <div className="grid gap-2">
+                    <Field id="refund-amount" label="Amount refunded">
+                      <Input
+                        id="refund-amount"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={refundAmount}
+                        onChange={(event) => setRefundAmount(event.target.value)}
+                      />
+                    </Field>
+                    <div className="flex gap-2">
+                      <Button
+                        size="lg"
+                        disabled={saving || !(Number(refundAmount) > 0)}
+                        onClick={() => onRecordRefund(appointment, Math.round(Number(refundAmount) * 100))}
+                      >
+                        Confirm refund
+                      </Button>
+                      <Button size="lg" variant="outline" disabled={saving} onClick={() => setRefunding(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="lg" variant="outline" disabled={saving} onClick={() => setRefunding(true)}>
+                    Record a refund
+                  </Button>
+                )
               ) : null}
               {appointment.status === "pending" ? (
                 <Button size="lg" disabled={saving} onClick={() => onStatus(appointment, "confirmed", "Appointment confirmed")}>

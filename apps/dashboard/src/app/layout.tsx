@@ -43,7 +43,7 @@ export default function RootLayout({
         <TooltipProvider>{children}</TooltipProvider>
         <Analytics />
         {/* Live chat support. Tidio for now — revisit once volume justifies a cheaper provider (docs/follow-ups.md). */}
-        <Script src="https://code.tidio.co/wnthsfrduq8rjday2ewo4vq6dslaavmi.js" strategy="afterInteractive" async />
+        <Script src="https://code.tidio.co/u2xn0hjro3vpvokct80evnxhsmqt8qib.js" strategy="afterInteractive" async />
       </body>
     </html>
   );

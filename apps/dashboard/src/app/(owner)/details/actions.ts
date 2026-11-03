@@ -16,6 +16,8 @@ export type DetailsInput = {
   country: string;
   timezone: string;
   currency: string;
+  /** General estimated tax rate for the Finance page, as a percent (0-100). Empty string means "not set". */
+  taxRatePercent: string;
 };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,6 +35,13 @@ export async function saveDetails(input: DetailsInput): Promise<ActionResult> {
   if (!TIMEZONES.some((item) => item.value === input.timezone)) return fail("Choose a time zone.");
   if (!CURRENCIES.some((item) => item.code === input.currency)) return fail("Choose a currency.");
 
+  let taxRatePercent: number | null = null;
+  if (input.taxRatePercent.trim()) {
+    const parsed = Number(input.taxRatePercent);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fail("Tax rate must be between 0 and 100.");
+    taxRatePercent = Math.round(parsed * 100) / 100;
+  }
+
   const { error } = await ctx.supabase
     .from("businesses")
     .update({
@@ -46,6 +55,7 @@ export async function saveDetails(input: DetailsInput): Promise<ActionResult> {
       country: input.country,
       timezone: input.timezone,
       currency: input.currency,
+      tax_rate_percent: taxRatePercent,
     })
     .eq("id", ctx.business.id);
   if (error) return dbError("save details", error);

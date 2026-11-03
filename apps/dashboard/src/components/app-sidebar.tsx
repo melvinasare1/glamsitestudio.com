@@ -1,17 +1,21 @@
 "use client";
 
 import {
+  BarChart3Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
   ClockIcon,
+  ContactIcon,
   CreditCardIcon,
   ExternalLinkIcon,
   LayoutDashboardIcon,
   LifeBuoyIcon,
   MailIcon,
   PaletteIcon,
+  PiggyBankIcon,
   ScissorsIcon,
   SettingsIcon,
+  TagIcon,
   UsersIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -25,13 +29,17 @@ type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolea
 const NAV: NavItem[] = [
   { title: "Overview", url: "/", icon: LayoutDashboardIcon },
   { title: "Appointments", url: "/appointments", icon: CalendarDaysIcon },
+  { title: "Analytics", url: "/analytics", icon: BarChart3Icon },
+  { title: "Customers", url: "/customers", icon: ContactIcon },
   { title: "Website", url: "/website", icon: PaletteIcon },
   { title: "Services", url: "/services", icon: ScissorsIcon },
   { title: "Team", url: "/team", icon: UsersIcon },
   { title: "Opening hours", url: "/hours", icon: ClockIcon },
   { title: "Booking", url: "/booking", icon: CalendarClockIcon },
+  { title: "Discounts", url: "/discounts", icon: TagIcon },
   { title: "Messages", url: "/messages", icon: MailIcon },
   { title: "Business details", url: "/details", icon: SettingsIcon },
+  { title: "Finance", url: "/finance", icon: PiggyBankIcon },
   { title: "Billing", url: "/billing", icon: CreditCardIcon },
   { title: "Support", url: "/support", icon: LifeBuoyIcon },
 ];

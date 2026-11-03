@@ -143,6 +143,9 @@ rewritten onto this repo's own salon tables. Ternarie itself is untouched
 - [x] Owner records in-salon payments; appointment shows paid, deposit, due
 - [x] Decide our platform fee per booking, if any — 1% via
       `PLATFORM_FEE_BPS`, Stripe's `application_fee_amount`
+- [x] Discount codes (percent or fixed amount off, optional expiry and
+      redemption limit) a client can enter at checkout; applied to the
+      amount charged on the salon's connected account, 3 Nov 2026
 
 ### Phase 3 · Refunds and no-show rules
 
