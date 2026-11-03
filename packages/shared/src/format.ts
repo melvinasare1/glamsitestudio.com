@@ -11,10 +11,16 @@ export const WEEKDAYS: { value: Weekday; label: string; short: string }[] = [
 ];
 
 export const CURRENCIES = [
-  { code: "GBP", label: "£ British pound" },
-  { code: "EUR", label: "€ Euro" },
-  { code: "USD", label: "$ US dollar" },
+  { code: "GBP", label: "£ British pound", symbol: "£" },
+  { code: "EUR", label: "€ Euro", symbol: "€" },
+  { code: "USD", label: "$ US dollar", symbol: "$" },
+  { code: "CAD", label: "C$ Canadian dollar", symbol: "C$" },
 ] as const;
+
+/** "USD" → "$", falls back to the code itself for anything not in CURRENCIES. */
+export function currencySymbol(currency: string): string {
+  return CURRENCIES.find((item) => item.code === currency)?.symbol ?? currency;
+}
 
 /** 4500 GBP → "£45", 4550 → "£45.50" */
 export function formatMoney(cents: number, currency: string): string {

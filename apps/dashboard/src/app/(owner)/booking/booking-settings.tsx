@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { formatClock, formatDayShort, todayIn, zonedParts, type BookingRules, type PaymentPolicy } from "@glamsite/shared/booking";
-import { WEEKDAYS, formatTime } from "@glamsite/shared/format";
+import { WEEKDAYS, currencySymbol, formatTime } from "@glamsite/shared/format";
 import type { OpeningHours, StaffMember, StaffWorkingHours, TimeOff } from "@glamsite/shared/types";
 import { EmptyState, Field, Panel } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +100,7 @@ function NumberSelect({
 
 export function RulesForm({ rules, currency }: { rules: BookingRules; currency: string }) {
   const { pending, run } = useAction();
-  const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
+  const symbol = currencySymbol(currency);
   const [form, setForm] = useState<RulesInput>({
     slotIntervalMinutes: rules.slotIntervalMinutes,
     minNoticeMinutes: rules.minNoticeMinutes,
@@ -174,7 +174,7 @@ export function RulesForm({ rules, currency }: { rules: BookingRules; currency: 
             onChange={(event) => set("policyText", event.target.value)} />
         </Field>
         <div>
-          <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save rules"}</Button>
+          <Button type="submit" size="lg" loading={pending}>{pending ? "Saving…" : "Save rules"}</Button>
         </div>
       </form>
     </Panel>
@@ -276,7 +276,7 @@ export function StaffHours({
                 />
               </div>
               <SheetFooter className="mt-auto">
-                <Button size="lg" disabled={pending}
+                <Button size="lg" loading={pending}
                   onClick={() =>
                     run(() => saveStaffHours(editing.person.id, slotsFromDays(editing.days)), "Working hours saved", () =>
                       setEditing(null)
@@ -436,7 +436,7 @@ export function TimeOffPanel({
                 </Field>
               </div>
               <SheetFooter>
-                <Button type="submit" size="lg" disabled={pending}>{pending ? "Adding…" : "Add time off"}</Button>
+                <Button type="submit" size="lg" loading={pending}>{pending ? "Adding…" : "Add time off"}</Button>
               </SheetFooter>
             </form>
           ) : null}

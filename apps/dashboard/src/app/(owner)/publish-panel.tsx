@@ -33,7 +33,7 @@ export function PublishPanel({ ready, launched }: { ready: boolean; launched: bo
         actions={
           <Button
             size="lg"
-            disabled={launchPending}
+            loading={launchPending}
             onClick={() => {
               setLaunchError(null);
               startLaunchTransition(async () => {
@@ -77,7 +77,7 @@ export function PublishPanel({ ready, launched }: { ready: boolean; launched: bo
                 <ExternalLinkIcon /> View site
               </a>
             </Button>
-            <Button variant="ghost" disabled={pending}
+            <Button variant="ghost" loading={pending}
               onClick={() => {
                 if (window.confirm("Take your site offline? Visitors will see a 'not found' page until you publish again.")) {
                   run(() => setPublished(false), "Site unpublished");
@@ -87,7 +87,7 @@ export function PublishPanel({ ready, launched }: { ready: boolean; launched: bo
             </Button>
           </div>
         ) : (
-          <Button size="lg" disabled={pending} onClick={() => run(() => setPublished(true), "Your site is live")}>
+          <Button size="lg" loading={pending} onClick={() => run(() => setPublished(true), "Your site is live")}>
             {pending ? "Publishing…" : "Publish site"}
           </Button>
         )

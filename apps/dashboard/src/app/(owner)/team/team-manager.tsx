@@ -169,7 +169,7 @@ export function TeamManager({
                 </label>
               </div>
               <SheetFooter>
-                <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+                <Button type="submit" size="lg" loading={pending}>{pending ? "Saving…" : "Save"}</Button>
               </SheetFooter>
             </form>
           ) : null}

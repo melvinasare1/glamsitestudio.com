@@ -27,7 +27,7 @@ export function LaunchButton() {
 
   return (
     <div className="mt-5">
-      <Button disabled={pending} onClick={onClick}>
+      <Button loading={pending} onClick={onClick}>
         {pending ? "Taking you to payment…" : "Launch: $1 for 3 months"}
       </Button>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}

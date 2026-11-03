@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2Icon } from "lucide-react";
 import { useState } from "react";
 
 /** Two-step cancel, so a stray tap doesn't cancel someone's appointment. */
@@ -43,8 +44,9 @@ export function CancelAppointment({ token }: { token: string }) {
               type="button"
               onClick={cancel}
               disabled={pending}
-              className="rounded-full bg-[#9b1c1c] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-[#9b1c1c] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
             >
+              {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
               {pending ? "Cancelling…" : "Yes, cancel it"}
             </button>
             <button

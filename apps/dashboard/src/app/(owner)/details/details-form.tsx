@@ -87,7 +87,7 @@ export function DetailsForm({ business }: { business: Business }) {
       </Panel>
 
       <div>
-        <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save details"}</Button>
+        <Button type="submit" size="lg" loading={pending}>{pending ? "Saving…" : "Save details"}</Button>
       </div>
     </form>
   );

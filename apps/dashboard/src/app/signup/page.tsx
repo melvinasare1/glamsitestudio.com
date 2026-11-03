@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AUTH_INPUT_CLASS, AuthFrame } from "@/components/auth-frame";
@@ -78,8 +79,9 @@ export default function SignUpPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-navy px-6 py-3 text-sm font-medium text-white transition hover:bg-navy/90 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-navy px-6 py-3 text-sm font-medium text-white transition hover:bg-navy/90 disabled:opacity-60"
         >
+          {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
           {pending ? "Creating your dashboard…" : "Create your website"}
         </button>
         <p className="text-sm text-ink-700">

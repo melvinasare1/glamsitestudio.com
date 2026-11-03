@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- public storage URLs at unknown sizes */
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { formatDuration, formatServicePrice, groupServices } from "@glamsite/shared/format";
+import { currencySymbol, formatDuration, formatServicePrice, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory, StaffMember } from "@glamsite/shared/types";
 import { ImageInput } from "@/components/editor/image-input";
 import { EmptyState, Field, Panel } from "@/components/page";
@@ -77,7 +77,7 @@ export function ServicesManager({
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const groups = groupServices(categories, services);
   const sortedCategories = [...categories].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
-  const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
+  const symbol = currencySymbol(currency);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   function toggleStaff(id: string, on: boolean) {
@@ -188,7 +188,7 @@ export function ServicesManager({
                 >
                   <Input autoFocus value={renaming.name} maxLength={80}
                     onChange={(event) => setRenaming({ ...renaming, name: event.target.value })} />
-                  <Button type="submit" disabled={pending}>Save</Button>
+                  <Button type="submit" loading={pending}>Save</Button>
                   <Button type="button" variant="ghost" onClick={() => setRenaming(null)}>Cancel</Button>
                 </form>
               ) : (
@@ -229,7 +229,7 @@ export function ServicesManager({
         >
           <Input value={newCategory} maxLength={80} placeholder="New category name"
             onChange={(event) => setNewCategory(event.target.value)} />
-          <Button type="submit" variant="outline" disabled={pending || !newCategory.trim()}>
+          <Button type="submit" variant="outline" loading={pending} disabled={!newCategory.trim()}>
             <PlusIcon /> Add
           </Button>
         </form>
@@ -325,7 +325,7 @@ export function ServicesManager({
                 </label>
               </div>
               <SheetFooter>
-                <Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save service"}</Button>
+                <Button type="submit" size="lg" loading={pending}>{pending ? "Saving…" : "Save service"}</Button>
               </SheetFooter>
             </form>
           ) : null}
