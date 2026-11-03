@@ -23,7 +23,7 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
 
 - **No way to upgrade hosting tier or add done-for-you design after
   launch.** Sign-up no longer asks for a plan, and launch is hard-coded to
-  Basic ($1 first month). The Stripe Customer Portal's plan-switcher needs
+  Basic ($1 for the first 3 months). The Stripe Customer Portal's plan-switcher needs
   pre-configured Products/Prices, which this app doesn't use (Checkout
   builds prices inline with `price_data`) — so "Manage billing" won't
   actually offer an upgrade yet. Trigger: first owner asks to upgrade, or
@@ -55,12 +55,24 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
 - **The booking page uses neutral colours** when an owner hasn't picked
   brand colours, not each template's own palette. Trigger: the second
   template design.
+- **No visual template picker or per-template detail page** (like
+  https://themes.shopify.com/themes/horizon/presets/horizon — preview
+  image, what it offers, a demo link, price). With only Luxe shipped,
+  there's nothing to compare yet. Trigger: the second template design.
 - **Two versions of the icon library** (`lucide-react` 1.x in the dashboard,
   0.408 in the site app). The dashboard header's menu icon renders
   differently on the server and in the browser, so React reports a hydration
   error and re-renders the page in the browser. It was already on `main`.
   Trigger: next dashboard UI work; align both apps on one version.
 
+- **True multi-page templates.** Every template today (Luxe, Salon, Barber)
+  renders as one scrolling page at `/sites/[slug]`; `sections` only picks
+  which blocks appear on that page, not separate URLs. The "Search &
+  sharing" section's meta title/description already covers this one page.
+  If a template ever splits into real routes (e.g. `/about`, `/services`),
+  each page will need its own meta title/description, which `site-content.ts`
+  doesn't support yet (one `seo` section per business, not per page).
+  Trigger: first template that needs separate URLs per section.
 - **Owner dashboard on the owner's own domain** (e.g. `dashboard.bellahair.co.uk`).
   Clients never see the dashboard, and sign-in emails would still have to go
   through `dashboard.glamsitestudio.com`, so it adds setup and support for

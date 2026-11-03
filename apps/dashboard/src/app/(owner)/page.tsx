@@ -105,7 +105,7 @@ export default async function OverviewPage() {
 
         <Panel title="Your account manager">
           <p className="text-sm text-muted-foreground">
-            Connecting a domain, importing your price list, or anything else slowing you down — your dedicated
+            Connecting a domain, importing your price list, or anything else slowing you down: your dedicated
             account manager is here to help you get set up and keep your site running smoothly.{" "}
             <Link href="/support" className="font-medium text-brand underline-offset-4 hover:underline">
               Get in touch

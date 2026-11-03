@@ -30,7 +30,7 @@ export default function SignUpPage() {
     <AuthFrame
       kicker="Glam Site Studios"
       title="Create your website"
-      description="Just your email to start. Add your business details and customise your site once you're in — pay only when you're ready to go live."
+      description="Just your email to start. Add your business details and customise your site once you're in. Pay only when you're ready to go live."
     >
       <form onSubmit={onSubmit} className="mt-8 grid gap-5">
         <label className="block text-sm font-medium">

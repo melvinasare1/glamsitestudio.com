@@ -78,7 +78,7 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
         {
           price_data: {
             currency: "usd",
-            product_data: { name: "Glam Site Studios hosting — basic" },
+            product_data: { name: "Glam Site Studios hosting: Basic" },
             unit_amount: hostingPriceCents,
             recurring: { interval: "month" },
           },

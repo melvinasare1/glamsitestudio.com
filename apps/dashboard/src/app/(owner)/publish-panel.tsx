@@ -27,8 +27,8 @@ export function PublishPanel({ ready, launched }: { ready: boolean; launched: bo
         title="Launch your site"
         description={
           ready
-            ? "Everything essential is in place. Launch when you're happy — $1 for your first month of hosting."
-            : "Finish the essentials below, or launch now and keep editing. $1 for your first month of hosting."
+            ? "Everything essential is in place. Launch when you're happy. $1 for your first 3 months of hosting."
+            : "Finish the essentials below, or launch now and keep editing. $1 for your first 3 months of hosting."
         }
         actions={
           <Button
@@ -46,7 +46,7 @@ export function PublishPanel({ ready, launched }: { ready: boolean; launched: bo
               });
             }}
           >
-            {launchPending ? "Taking you to payment…" : "Launch — $1 first month"}
+            {launchPending ? "Taking you to payment…" : "Launch: $1 for 3 months"}
           </Button>
         }
       >

@@ -5,7 +5,7 @@ import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
 
 /**
  * Publish or unpublish the site. Going live for the first time happens
- * through startLaunchCheckout ($1 first month) — this only re-checks the
+ * through startLaunchCheckout ($1 for the first 3 months) — this only re-checks the
  * subscription so an owner can't flip status=live by calling the action
  * directly without ever paying. Once launched, toggling on/off here is free.
  */
@@ -22,7 +22,7 @@ export async function setPublished(live: boolean): Promise<ActionResult> {
       .maybeSingle();
     const status = billingRow?.subscription_status;
     if (status !== "active" && status !== "trialing") {
-      return fail("Launch your site from Billing first — $1 for your first month of hosting.");
+      return fail("Launch your site from Billing first. $1 for your first 3 months of hosting.");
     }
   }
 
