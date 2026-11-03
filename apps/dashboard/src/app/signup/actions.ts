@@ -2,13 +2,15 @@
 
 import { randomBytes } from "node:crypto";
 import { slugProblem, slugify } from "@glamsite/shared/domain";
+import { sendEmail, signInLinkEmail } from "@glamsite/shared/email";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
+import { getDashboardUrl } from "@glamsite/shared/supabase/env";
 import { createClient } from "@glamsite/shared/supabase/server";
 import { DEFAULT_TEMPLATE_ID } from "@glamsite/shared/templates";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export type SignupResult = { ok: true } | { ok: false; error: string };
+export type SignupResult = { ok: true; checkEmail: boolean } | { ok: false; error: string };
 
 function randomSuffix(): string {
   return randomBytes(3).toString("hex");
@@ -22,11 +24,22 @@ function nameFromEmail(email: string): string {
 }
 
 /**
- * Shopify-style sign-up: email only, no plan choice, no payment. Creates the
- * login and an empty draft business immediately, then signs the owner into
- * this browser so the very next screen is their dashboard. Everything in the
- * dashboard is open from day one — the only thing gated on payment is
- * launching the site (see (owner)/actions.ts launchSite()).
+ * Shopify-style sign-up: email only, no plan choice, no payment. For a
+ * brand-new email, creates the login and an empty draft business
+ * immediately, then signs the owner into this browser so the very next
+ * screen is their dashboard. Everything in the dashboard is open from day
+ * one — the only thing gated on payment is launching the site (see
+ * (owner)/actions.ts launchSite()).
+ *
+ * For an email that already has an account, we must NOT sign the requester
+ * in directly: generateLink() happily mints a valid login token for
+ * whichever account owns that email, new or not, and redeeming it
+ * server-side (as this used to do unconditionally) let anyone who merely
+ * knew a salon owner's email address get logged into that owner's dashboard
+ * — no inbox access required. So for an existing email we only email the
+ * link (via our own Resend sender, not Supabase's unconfigured auth email)
+ * and ask the requester to open it from their own inbox, which is what
+ * actually proves they are the account's owner.
  */
 export async function startSignup(rawEmail: string): Promise<SignupResult> {
   const email = rawEmail.trim().toLowerCase();
@@ -40,19 +53,39 @@ export async function startSignup(rawEmail: string): Promise<SignupResult> {
   }
 
   // Creates the auth user if they're new, or finds them if they've signed up
-  // before — either way we get a token we can redeem for a session below,
-  // with no email round-trip needed.
+  // before. GoTrue records the request under "signup" for a brand-new email
+  // and "magiclink" for one that already has an account — that distinction
+  // is exactly what tells us whether it's safe to sign the requester in
+  // immediately below.
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (linkError || !link?.properties?.hashed_token || !link.user) {
     console.error("[signup] generateLink failed", linkError);
     return { ok: false, error: "Couldn't create your account. Try again." };
   }
   const ownerId = link.user.id;
+  const isNewAccount = link.properties.verification_type === "signup";
 
-  // GoTrue stores the token under whichever type it actually used to handle
-  // the request, not necessarily the "magiclink" we asked for — a brand-new
-  // email has to be created first, which GoTrue records as "signup". Using
-  // the wrong type here looks up the wrong token and fails as "expired".
+  if (!isNewAccount) {
+    // Existing account: email the link and stop. Built against our own
+    // /auth/confirm route (same one the "reset password" email links to)
+    // rather than GoTrue's hosted verify URL, so the token is only ever
+    // redeemed once the recipient opens this from their own inbox. We never
+    // learn here whether they actually do, which is the point.
+    const confirmUrl = new URL(`${getDashboardUrl()}/auth/confirm`);
+    confirmUrl.searchParams.set("token_hash", link.properties.hashed_token);
+    confirmUrl.searchParams.set("type", link.properties.verification_type);
+    confirmUrl.searchParams.set("next", "/");
+
+    const sent = await sendEmail({ to: email, ...signInLinkEmail(confirmUrl.toString()) });
+    if (!sent) {
+      console.error("[signup] could not email sign-in link");
+      return { ok: false, error: "Couldn't send your sign-in link. Try again." };
+    }
+    return { ok: true, checkEmail: true };
+  }
+
+  // Brand-new account: nobody can be impersonated yet, so it's safe to
+  // redeem the token ourselves and sign the requester straight in.
   const supabase = await createClient();
   const { error: verifyError } = await supabase.auth.verifyOtp({
     type: link.properties.verification_type,
@@ -62,10 +95,6 @@ export async function startSignup(rawEmail: string): Promise<SignupResult> {
     console.error("[signup] verifyOtp failed", verifyError);
     return { ok: false, error: "Couldn't sign you in. Try again." };
   }
-
-  // Returning owner: they already have a site, nothing left to provision.
-  const existing = await admin.from("businesses").select("id").eq("owner_id", ownerId).maybeSingle();
-  if (existing.data) return { ok: true };
 
   const name = nameFromEmail(email);
   const baseSlug = slugify(email.split("@")[0] ?? "") || "site";
@@ -89,7 +118,7 @@ export async function startSignup(rawEmail: string): Promise<SignupResult> {
       if (billing.error || booking.error || emailSettings.error) {
         console.error("[signup] supporting rows failed", billing.error, booking.error, emailSettings.error);
       }
-      return { ok: true };
+      return { ok: true, checkEmail: false };
     }
 
     if (businessError?.code !== "23505") {

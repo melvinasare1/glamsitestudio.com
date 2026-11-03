@@ -1,4 +1,5 @@
-/* eslint-disable @next/next/no-img-element -- owner photos come from storage at unknown sizes */
+/* eslint-disable @next/next/no-img-element -- the logo's aspect ratio is unknown, so it stays a plain <img> */
+import Image from "next/image";
 import {
   isSectionEnabled,
   sectionFlag,
@@ -40,7 +41,7 @@ export function StarterSite({ data, demo = false }: { data: SiteData; demo?: boo
         <section key="hero" className="relative overflow-hidden bg-[var(--accent)]">
           {image ? (
             <>
-              <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" />
               <div className="absolute inset-0 bg-black/40" aria-hidden />
             </>
           ) : null}
@@ -72,7 +73,11 @@ export function StarterSite({ data, demo = false }: { data: SiteData; demo?: boo
             {heading("about", "About us")}
             <p className="mt-5 whitespace-pre-line leading-relaxed opacity-80">{body}</p>
           </div>
-          {image ? <img src={image} alt="" className="aspect-[4/5] w-full rounded-xl object-cover" /> : null}
+          {image ? (
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl">
+              <Image src={image} alt="" fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+            </div>
+          ) : null}
         </section>
       );
     },
@@ -125,7 +130,15 @@ export function StarterSite({ data, demo = false }: { data: SiteData; demo?: boo
             {staff.map((person) => (
               <li key={person.id}>
                 {person.photoUrl ? (
-                  <img src={person.photoUrl} alt={person.name} className="aspect-square w-full rounded-xl object-cover" />
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+                    <Image
+                      src={person.photoUrl}
+                      alt={person.name}
+                      fill
+                      sizes="(min-width: 768px) 33vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div
                     className="flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--accent)] text-4xl font-[family-name:var(--font-heading)]"
@@ -152,7 +165,15 @@ export function StarterSite({ data, demo = false }: { data: SiteData; demo?: boo
           <ul className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3">
             {images.map((item, index) => (
               <li key={`${item.image}-${index}`}>
-                <img src={item.image} alt={item.caption || ""} className="aspect-square w-full rounded-lg object-cover" />
+                <div className="relative aspect-square w-full overflow-hidden rounded-lg">
+                  <Image
+                    src={item.image}
+                    alt={item.caption || ""}
+                    fill
+                    sizes="(min-width: 768px) 33vw, 50vw"
+                    className="object-cover"
+                  />
+                </div>
                 {item.caption ? <p className="mt-2 text-sm opacity-70">{item.caption}</p> : null}
               </li>
             ))}

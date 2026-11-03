@@ -20,6 +20,55 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/avif": "avif",
 };
 
+// Objects are never overwritten (each upload gets a fresh random name), so
+// the CDN can cache them for as long as it likes instead of the old 1 hour.
+// Storage's `cacheControl` field is a bare seconds-count, not a header string:
+// for non-Blob/FormData uploads the client itself wraps this same value as
+// `max-age=${cacheControl}`, so the server expects just the number here too.
+const CACHE_CONTROL = "31536000";
+
+// Longest edge a stored photo ever needs. Site templates render these at
+// well under half this width even on a 4K display once Next/Image's own
+// responsive <srcset> kicks in on top — this just caps what we ever have to
+// store and serve as the "original".
+const MAX_DIMENSION = 2000;
+const COMPRESSED_QUALITY = 0.82;
+
+/**
+ * Re-encodes an image client-side before it ever reaches Storage: downscales
+ * anything larger than MAX_DIMENSION and re-encodes as WebP, which is
+ * consistently smaller than camera-straight-out-of-phone JPEGs/PNGs. Bandwidth
+ * and storage cost scale with how many bytes we keep per photo, multiplied
+ * across every business and every visitor who loads it, so shrinking at
+ * upload time (once) is far cheaper than shrinking at serve time (every
+ * request). Falls back to the original file on any failure, since an owner
+ * being able to upload at all matters more than this optimisation.
+ */
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", COMPRESSED_QUALITY));
+    if (!blob || blob.size >= file.size) return file; // keep the original if we didn't actually shrink it
+
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${baseName}.webp`, { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 export function validateImage(file: File): string | null {
   if (!IMAGE_MIME_TYPES.has(file.type)) {
     return "Use a JPEG, PNG, WebP or AVIF image.";
@@ -63,7 +112,7 @@ async function uploadViaClient(
   file: File
 ) {
   const { error } = await supabase.storage.from(SITE_MEDIA_BUCKET).upload(objectPath, file, {
-    cacheControl: "3600",
+    cacheControl: CACHE_CONTROL,
     upsert: false,
     contentType: file.type || undefined,
   });
@@ -83,7 +132,8 @@ export async function uploadSiteImage(
   const validationError = validateImage(file);
   if (validationError) throw new Error(validationError);
 
-  const objectPath = `${businessId}/${crypto.randomUUID()}.${extensionFor(file)}`;
+  const uploadFile = await compressImage(file);
+  const objectPath = `${businessId}/${crypto.randomUUID()}.${extensionFor(uploadFile)}`;
 
   const {
     data: { session },
@@ -95,7 +145,7 @@ export async function uploadSiteImage(
     try {
       await uploadViaXhr({
         objectPath,
-        file,
+        file: uploadFile,
         accessToken: session.access_token,
         supabaseUrl,
         anonKey,
@@ -105,12 +155,12 @@ export async function uploadSiteImage(
       const message = err instanceof Error ? err.message : "";
       if (message !== "NETWORK") throw err;
       onProgress(10);
-      await uploadViaClient(supabase, objectPath, file);
+      await uploadViaClient(supabase, objectPath, uploadFile);
       onProgress(100);
     }
   } else {
     onProgress(10);
-    await uploadViaClient(supabase, objectPath, file);
+    await uploadViaClient(supabase, objectPath, uploadFile);
     onProgress(100);
   }
 
@@ -158,7 +208,7 @@ function uploadViaXhr(input: {
     xhr.onabort = () => reject(new Error("Upload was cancelled."));
 
     const body = new FormData();
-    body.append("cacheControl", "3600");
+    body.append("cacheControl", CACHE_CONTROL);
     body.append("", input.file);
     input.onProgress(0);
     xhr.send(body);
