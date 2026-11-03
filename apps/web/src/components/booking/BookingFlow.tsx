@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- team photos come from storage at unknown sizes */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import { addDays, depositAmountCents, formatDayLong, formatDayShort, staffForService, type PaymentPolicy } from "@glamsite/shared/booking";
 import { formatDuration, formatMoney, formatServicePrice, formatTime, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory } from "@glamsite/shared/types";
@@ -368,7 +368,13 @@ export function BookingFlow(props: Props) {
                         >
                           <span className="flex min-w-0 items-start gap-3">
                             {item.imageUrl ? (
-                              <img src={item.imageUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
+                              <Image
+                                src={item.imageUrl}
+                                alt=""
+                                width={56}
+                                height={56}
+                                className="size-14 shrink-0 rounded-xl object-cover"
+                              />
                             ) : null}
                             <span className="min-w-0">
                               <span className="block font-medium group-hover:underline group-hover:underline-offset-4">{item.name}</span>
@@ -698,7 +704,7 @@ function PersonButton({
       }`}
     >
       {photoUrl ? (
-        <img src={photoUrl} alt="" className="size-12 rounded-full object-cover" />
+        <Image src={photoUrl} alt="" width={48} height={48} className="size-12 rounded-full object-cover" />
       ) : (
         <span className="flex size-12 items-center justify-center rounded-full bg-[var(--accent)] font-[family-name:var(--font-heading)] text-lg text-[var(--accent-ink)]">
           {name === "Anyone available" ? "✶" : name.charAt(0)}

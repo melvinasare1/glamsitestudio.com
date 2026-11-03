@@ -33,14 +33,12 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   subdomain), since sign-up no longer asks for either. Name is editable on
   Business details; the subdomain isn't editable anywhere yet. Trigger:
   stage 4 self-serve domains, or sooner if it causes support requests.
-- **Sign-up signs owners in with an admin-generated magic link, redeemed
-  server-side in the same request** (no email sent, no "check your inbox"
-  step) — this also means the email address isn't verified as belonging to
-  the person who typed it. Low risk today (nothing but an editable draft
-  site sits behind it, and launching requires paying with a card anyway),
-  but revisit if accounts start getting created under others' emails.
-  Returning owners get back in via the existing "Reset password" link on
-  `/login`. Trigger: abuse, or before this matters for anything sensitive.
+- **Supabase's built-in auth emails (password reset on `/login`) still
+  aren't routed through Resend**, so they only reach project team members,
+  not real owners. Signup's own sign-in email now goes through Resend (see
+  Resolved), but `resetPasswordForEmail` on `/login` still relies on
+  Supabase's unconfigured sender. Trigger: before password reset is needed
+  by a real owner, or set up Resend SMTP in the Supabase dashboard.
 
 ## Deferred after booking phase 1
 
@@ -98,6 +96,18 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
 - **RLS performance warnings and the unindexed foreign key** from the Ansaa
   schema: gone with the stage 2 baseline (policies use `(select auth.uid())`;
   composite foreign keys indexed in `20261014100000_fk_indexes.sql`).
+
+- **Account takeover via sign-up's magic link.** `startSignup` used to
+  redeem the admin-generated magic link server-side in the same request,
+  for any email — including one that already had an account. Anyone who
+  knew a salon owner's email, without access to their inbox, could get
+  signed into that owner's dashboard: client PII, booking settings, Stripe
+  billing and Connect payout config. Fixed: GoTrue's `verification_type`
+  tells us whether the email is brand-new (`"signup"`, safe to redeem
+  immediately since nobody can be impersonated) or already has an account
+  (`"magiclink"`); for the latter we now only email the sign-in link, via
+  Resend, and require it to be opened from the recipient's own inbox before
+  a session is created.
 
 ---
 

@@ -10,6 +10,7 @@ export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checkEmail, setCheckEmail] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function onSubmit(event: React.FormEvent) {
@@ -21,9 +22,35 @@ export default function SignUpPage() {
         setError(result.error);
         return;
       }
+      if (result.checkEmail) {
+        setCheckEmail(true);
+        return;
+      }
       router.replace("/");
       router.refresh();
     });
+  }
+
+  if (checkEmail) {
+    return (
+      <AuthFrame
+        kicker="Glam Site Studios"
+        title="Check your email"
+        description={`We've sent a sign-in link to ${email}. Open it on this device to get into your dashboard.`}
+      >
+        <p className="mt-6 text-sm text-ink-700">
+          Didn&apos;t get it? Check spam, or{" "}
+          <button
+            type="button"
+            onClick={() => setCheckEmail(false)}
+            className="font-medium text-navy hover:underline"
+          >
+            try again
+          </button>
+          .
+        </p>
+      </AuthFrame>
+    );
   }
 
   return (

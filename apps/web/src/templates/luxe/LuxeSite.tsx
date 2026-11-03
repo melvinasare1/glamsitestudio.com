@@ -1,5 +1,6 @@
-/* eslint-disable @next/next/no-img-element -- owner photos come from storage at unknown sizes */
+/* eslint-disable @next/next/no-img-element -- the logo's aspect ratio is unknown, so it stays a plain <img> */
 import { ArrowRight, Mail, MapPin, MessageCircle, Phone, Plus, Star } from "lucide-react";
+import Image from "next/image";
 import { reviewRating, sectionFlag, sectionItems, sectionText } from "@glamsite/shared/site-content";
 import { formatAddress, formatDuration, formatServicePrice, groupServices, hoursByDay } from "@glamsite/shared/format";
 import { visibleSections } from "@glamsite/shared/templates";
@@ -223,10 +224,13 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
           <section className="relative isolate overflow-hidden bg-[var(--lx-dark)] text-[var(--lx-dark-ink)]">
             {heroImage ? (
               <>
-                <img
+                <Image
                   src={heroImage}
                   alt=""
-                  className="absolute inset-0 -z-10 h-full w-full object-cover object-[72%_center]"
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="-z-10 object-cover object-[72%_center]"
                 />
                 {/* Keeps the headline readable over any owner photo. */}
                 <div
@@ -268,7 +272,15 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
                 {showPrices ? <OutlineButton href="#prices">View our services</OutlineButton> : null}
               </div>
               {aboutImage ? (
-                <img src={aboutImage} alt="" className="aspect-[3/2] w-full rounded-xl object-cover shadow-[0_24px_48px_-28px_rgba(42,30,22,0.55)]" />
+                <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl shadow-[0_24px_48px_-28px_rgba(42,30,22,0.55)]">
+                  <Image
+                    src={aboutImage}
+                    alt=""
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
               ) : null}
             </div>
           </section>
@@ -307,7 +319,15 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
                       className="w-[78%] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]"
                     >
                       {person.photoUrl ? (
-                        <img src={person.photoUrl} alt={person.name} className="aspect-[4/5] w-full rounded-xl object-cover" />
+                        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl">
+                          <Image
+                            src={person.photoUrl}
+                            alt={person.name}
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 78vw"
+                            className="object-cover"
+                          />
+                        </div>
                       ) : (
                         <div
                           aria-hidden
@@ -343,7 +363,15 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
                       key={`${item.image}-${index}`}
                       className="w-[70%] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-4.5rem)/4)]"
                     >
-                      <img src={item.image} alt={item.caption || ""} className="aspect-[4/5] w-full rounded-xl object-cover" />
+                      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl">
+                        <Image
+                          src={item.image}
+                          alt={item.caption || ""}
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 70vw"
+                          className="object-cover"
+                        />
+                      </div>
                       {item.caption ? <p className="mt-3 text-sm text-[var(--lx-muted)]">{item.caption}</p> : null}
                     </li>
                   ))}
@@ -501,7 +529,7 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
           <section className="relative isolate overflow-hidden bg-[var(--lx-dark)] text-[var(--lx-dark-ink)]">
             {heroImage ? (
               <>
-                <img src={heroImage} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover object-[72%_30%]" />
+                <Image src={heroImage} alt="" fill sizes="100vw" className="-z-10 object-cover object-[72%_30%]" />
                 <div aria-hidden className="absolute inset-0 -z-10 bg-[rgba(18,12,8,0.78)]" />
               </>
             ) : null}

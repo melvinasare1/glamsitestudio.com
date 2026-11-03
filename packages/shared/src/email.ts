@@ -69,6 +69,29 @@ export async function sendEmail(email: OutgoingEmail): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
+// Auth templates
+// ---------------------------------------------------------------------------
+
+/**
+ * Sent instead of redeeming a sign-in token ourselves: the recipient has to
+ * open this from their own inbox before anyone gets a session, which is what
+ * proves they actually own the address (see signup/actions.ts startSignup()).
+ */
+export function signInLinkEmail(href: string): Rendered {
+  return {
+    subject: "Your Glam Site Studios sign-in link",
+    html: layout(
+      "Sign in to Glam Site Studios",
+      "Use the button below to sign in. The link works once and expires soon.",
+      "",
+      { label: "Sign in", href },
+      "If you didn't request this, you can ignore this email."
+    ),
+    text: `Sign in to Glam Site Studios\n\n${href}\n\nIf you didn't request this, you can ignore this email.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Booking templates
 // ---------------------------------------------------------------------------
 
