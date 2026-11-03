@@ -40,6 +40,11 @@ const int = (value: unknown, fallback = 0): number =>
 const intOrNull = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : null;
 const strOrNull = (value: unknown): string | null => (typeof value === "string" && value ? value : null);
+/** `numeric` columns come back from PostgREST as strings (to avoid float precision loss), so parse rather than type-check. */
+const floatOrNull = (value: unknown): number | null => {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
@@ -71,6 +76,7 @@ export function businessFromRow(row: Row): Business {
     },
     timezone: str(row.timezone, "Europe/London"),
     currency: str(row.currency, "GBP"),
+    taxRatePercent: floatOrNull(row.tax_rate_percent),
     bookingMode: oneOf<BookingMode>(row.booking_mode, ["none", "link", "glamsite"], "none"),
     bookingUrl: str(row.booking_url),
     content: parseSiteContent(row.content),
@@ -246,6 +252,8 @@ export function appointmentFromRow(row: Row): Appointment {
     createdAt: str(row.created_at),
     discountCode: strOrNull(row.discount_code),
     discountCents: int(row.discount_cents),
+    refundCents: int(row.refund_cents),
+    refundedAt: strOrNull(row.refunded_at),
     client: client ? { name: str(client.name), email: str(client.email), phone: str(client.phone) } : null,
     staffName: staff ? str(staff.name) : null,
   };

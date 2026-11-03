@@ -6,6 +6,7 @@ import Image from "next/image";
 import { addDays, depositAmountCents, formatDayLong, formatDayShort, staffForService, type PaymentPolicy } from "@glamsite/shared/booking";
 import { formatDuration, formatMoney, formatServicePrice, formatTime, groupServices } from "@glamsite/shared/format";
 import type { Service, ServiceCategory } from "@glamsite/shared/types";
+import { track } from "@/lib/track";
 
 type Person = {
   id: string;
@@ -271,6 +272,7 @@ export function BookingFlow(props: Props) {
         code?: string;
       };
       if (response.ok && body.checkoutUrl) {
+        track("checkout_started", { slug: props.slug, serviceId: service.id });
         window.location.href = body.checkoutUrl;
         return;
       }
@@ -380,6 +382,7 @@ export function BookingFlow(props: Props) {
                           onClick={() => {
                             setServiceId(item.id);
                             setStaffChoice(null);
+                            track("booking_started", { slug: props.slug, serviceId: item.id });
                           }}
                           className="group flex w-full items-start justify-between gap-4 py-4 text-left"
                         >

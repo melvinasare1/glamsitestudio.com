@@ -53,6 +53,7 @@ import {
   workingHoursFromRow,
 } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
+import { trackServer } from "@/lib/server-track";
 import { getDashboardUrl, getWebUrl } from "@glamsite/shared/supabase/env";
 import type {
   Appointment,
@@ -612,6 +613,12 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
 
     const token = data.manage_token as string;
     if (discountMatch) await redeemDiscountCode(supabase, discountMatch);
+    void trackServer(business.id, "booking_created", {
+      serviceId: service.id,
+      collectPayment,
+      priceCents: service.priceCents,
+      discountCents,
+    });
 
     if (collectPayment) {
       try {

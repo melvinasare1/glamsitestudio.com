@@ -26,6 +26,8 @@ export type Business = {
   address: Address;
   timezone: string;
   currency: string;
+  /** General estimated tax rate shown on the Finance page. Informational only — never applied to a Stripe charge. Null if the owner hasn't set one. */
+  taxRatePercent: number | null;
   bookingMode: BookingMode;
   bookingUrl: string;
   content: SiteContent;
@@ -208,6 +210,9 @@ export type Appointment = {
   discountCode: string | null;
   /** How much was taken off because of discountCode. 0 when discountCode is null. */
   discountCents: number;
+  /** What was actually given back to the client. Recorded by the owner, not fetched from Stripe. 0 means no refund. */
+  refundCents: number;
+  refundedAt: string | null;
   /** Embedded when the query selects `clients(name, email, phone)`. */
   client: { name: string; email: string; phone: string } | null;
   /** Embedded when the query selects `staff(name)`. */
