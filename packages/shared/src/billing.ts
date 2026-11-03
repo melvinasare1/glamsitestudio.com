@@ -12,8 +12,8 @@ export const EMAIL_QUOTA_BY_TIER: Record<HostingTier, number> = {
 
 /** Monthly hosting price per tier, in cents. Single source of truth for Checkout and marketing copy. */
 export const HOSTING_TIER_PRICE_CENTS: Record<HostingTier, number> = {
-  basic: 1500,
-  popular: 3000,
+  basic: 2200,
+  popular: 3500,
   premium: 6000,
 };
 

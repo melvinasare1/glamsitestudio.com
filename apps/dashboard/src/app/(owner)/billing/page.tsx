@@ -51,7 +51,7 @@ export default async function BillingPage() {
           {launched ? (
             <>
               <p className="mt-5 text-sm text-muted-foreground">
-                Manage your card and invoices on Stripe — it opens in the same tab and brings you back here. Want a
+                Manage your card and invoices on Stripe. It opens in the same tab and brings you back here. Want a
                 bigger hosting tier or done-for-you design?{" "}
                 <Link href="/support" className="font-medium text-brand underline-offset-4 hover:underline">
                   Get in touch
@@ -63,7 +63,7 @@ export default async function BillingPage() {
           ) : (
             <>
               <p className="mt-5 text-sm text-muted-foreground">
-                Your site stays private until you launch it — $1 for your first month of Basic hosting. Upgrade to a
+                Your site stays private until you launch it. $1 for your first 3 months of Basic hosting. Upgrade to a
                 bigger plan any time after you're live.
               </p>
               <LaunchButton />
@@ -74,14 +74,14 @@ export default async function BillingPage() {
         <Panel title="Get paid for bookings">
           {billing?.stripeConnectChargesEnabled ? (
             <p className="text-sm text-muted-foreground">
-              Connected — client deposits and payments go straight to your Stripe account.
+              Connected. Client deposits and payments go straight to your Stripe account.
             </p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
                 {billing?.stripeConnectAccountId
-                  ? "Onboarding isn't finished yet — Stripe still needs some details before you can accept payments."
-                  : "Connect Stripe to accept deposits and payments when clients book online. Funds go straight to your account — we never hold your money."}
+                  ? "Onboarding isn't finished yet. Stripe still needs some details before you can accept payments."
+                  : "Connect Stripe to accept deposits and payments when clients book online. Funds go straight to your account. We never hold your money."}
               </p>
               <ConnectStripeButton label={billing?.stripeConnectAccountId ? "Finish Stripe setup" : "Connect Stripe"} />
             </>

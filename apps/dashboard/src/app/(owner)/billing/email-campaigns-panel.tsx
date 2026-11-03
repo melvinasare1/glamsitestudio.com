@@ -7,7 +7,7 @@ export function EmailCampaignsPanel() {
     <Panel title="Email campaigns">
       <p className="text-sm text-muted-foreground">
         Composing and sending marketing emails to your clients from here is coming soon. Until then, your dedicated
-        account manager can help you plan one — just reach out from{" "}
+        account manager can help you plan one. Just reach out from{" "}
         <Link href="/support" className="font-medium text-foreground underline underline-offset-4">
           Support
         </Link>

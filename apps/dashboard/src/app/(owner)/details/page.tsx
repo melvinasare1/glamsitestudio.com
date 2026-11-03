@@ -26,7 +26,7 @@ export default async function DetailsPage() {
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             Connecting your own domain from here is coming soon. Until then, your dedicated account manager will set
-            it up for you — just send the domain you&apos;d like to use from{" "}
+            it up for you. Just send the domain you&apos;d like to use from{" "}
             <Link href="/support" className="font-medium text-foreground underline underline-offset-4">
               Support
             </Link>

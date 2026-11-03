@@ -17,7 +17,7 @@ import { ownerSignupHref } from "@/components/marketing/nav";
 export const metadata: Metadata = {
   title: "Glam Site Studios: websites for salons, barbers and beauty studios",
   description:
-    "A beautiful website for your hair or beauty business, live today. Add your services, prices and photos from your phone. First month $1.",
+    "A beautiful website for your hair or beauty business, live today. Add your services, prices and photos from your phone. First 3 months $1.",
 };
 
 const BUSINESSES = ["Hair salons", "Barbers", "Nail studios", "Lash & brow", "Makeup artists"];
@@ -64,8 +64,8 @@ const FAQS = [
     a: "Yes. Paste your booking link and every Book button on your site goes there. Our own booking, with deposits and reminders, is coming soon as an optional add-on.",
   },
   {
-    q: "What happens after the first month?",
-    a: "Hosting is $15 a month, or $150 a year. You can cancel any time, and your site goes offline at the end of the period you've paid for.",
+    q: "What happens after the first 3 months?",
+    a: `Hosting is $${HOSTING_TIER_PRICE_CENTS.basic / 100} a month, or $${(HOSTING_TIER_PRICE_CENTS.basic / 100) * 10} a year. You can cancel any time, and your site goes offline at the end of the period you've paid for.`,
   },
   {
     q: "Can I use my own domain?",
@@ -277,7 +277,7 @@ export default function HomePage() {
                   {hasCampaignsAccess(tier.value) ? (
                     <li className="flex gap-3">
                       <Check className="mt-0.5 size-5 shrink-0 text-petal-deep" aria-hidden />
-                      Email campaigns — coming soon
+                      Email campaigns (coming soon)
                     </li>
                   ) : null}
                 </ul>
@@ -286,8 +286,8 @@ export default function HomePage() {
           </div>
 
           <p className="mt-16 border-t border-white/15 pt-6 text-sm text-white/70">
-            Prefer to pay yearly? Basic hosting is $150 a year. Online booking with deposits and reminders is coming
-            soon as an optional add-on.
+            Prefer to pay yearly? Basic hosting is {`$${(HOSTING_TIER_PRICE_CENTS.basic / 100) * 10}`} a year. Online
+            booking with deposits and reminders is coming soon as an optional add-on.
           </p>
         </div>
       </section>
@@ -332,7 +332,7 @@ export default function HomePage() {
         >
           Get your website
         </a>
-        <p className="mt-4 text-sm text-mauve">First month $1. Cancel any time.</p>
+        <p className="mt-4 text-sm text-mauve">First 3 months $1. Cancel any time.</p>
       </section>
     </main>
   );

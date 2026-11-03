@@ -152,7 +152,7 @@ export function RulesForm({ rules, currency }: { rules: BookingRules; currency: 
           </span>
           <Switch checked={form.autoConfirm} onCheckedChange={(checked) => set("autoConfirm", checked)} />
         </label>
-        <Field id="r-payment" label="How clients pay" description="Shown to clients when they book. Taking the payment itself isn't set up yet — you'll need to follow up to collect it.">
+        <Field id="r-payment" label="How clients pay" description="Shown to clients when they book. Taking the payment itself isn't set up yet, so you'll need to follow up to collect it.">
           <Select value={form.paymentPolicy} onValueChange={(value) => set("paymentPolicy", value as PaymentPolicy)}>
             <SelectTrigger id="r-payment" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>

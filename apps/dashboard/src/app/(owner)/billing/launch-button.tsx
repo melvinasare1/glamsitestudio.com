@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { startLaunchCheckout } from "./actions";
 
 /**
- * Redirects to Stripe Checkout for the $1 first month of hosting — the one
+ * Redirects to Stripe Checkout for $1 for the first 3 months of hosting — the one
  * thing gated on payment. Same redirect-and-leave pattern as
  * ManageBillingButton and ConnectStripeButton.
  */
@@ -28,7 +28,7 @@ export function LaunchButton() {
   return (
     <div className="mt-5">
       <Button disabled={pending} onClick={onClick}>
-        {pending ? "Taking you to payment…" : "Launch — $1 first month"}
+        {pending ? "Taking you to payment…" : "Launch: $1 for 3 months"}
       </Button>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>

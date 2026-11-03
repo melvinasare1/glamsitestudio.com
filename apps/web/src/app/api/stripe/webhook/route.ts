@@ -9,7 +9,7 @@ import { sendBookingConfirmationEmails } from "@/lib/booking";
 /**
  * Sign-up (apps/dashboard/src/app/signup/actions.ts) creates the business
  * directly, with no payment involved. The only Checkout flow that lands
- * here for a business is "launch" — the $1 first month of hosting that
+ * here for a business is "launch" — the $1 for the first 3 months of hosting that
  * makes a draft site public (apps/dashboard/src/app/(owner)/billing/actions.ts
  * startLaunchCheckout) — plus the booking-deposit flow below. Keeps
  * subscription_status in sync afterwards.
