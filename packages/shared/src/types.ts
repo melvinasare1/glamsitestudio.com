@@ -28,6 +28,12 @@ export type Business = {
   currency: string;
   /** General estimated tax rate shown on the Finance page. Informational only — never applied to a Stripe charge. Null if the owner hasn't set one. */
   taxRatePercent: number | null;
+  /** Owner-authored, plain text. Null if not set. Not shown on the site by any template yet. */
+  policiesText: string | null;
+  /** Owner-authored, plain text. Null if not set. Not shown on the site by any template yet. */
+  termsText: string | null;
+  /** What a referrer earns (as a one-time discount code) once who they referred completes their first appointment. Null = referral program is off. */
+  referralRewardCents: number | null;
   bookingMode: BookingMode;
   bookingUrl: string;
   content: SiteContent;
@@ -153,8 +159,30 @@ export type Client = {
   phone: string;
   /** Owner-only, never shown to the client. */
   notes: string;
+  /** This client's own code for referring friends. Always set. */
+  referralCode: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ReferralStatus = "pending" | "rewarded";
+
+/** One referred client, tracked once from their first booking to their first completed appointment. */
+export type ClientReferral = {
+  id: string;
+  businessId: string;
+  referrerClientId: string;
+  referredClientId: string;
+  status: ReferralStatus;
+  rewardDiscountCodeId: string | null;
+  createdAt: string;
+  rewardedAt: string | null;
+  /** Embedded when the query selects `referrer:referrer_client_id(name, email)`. */
+  referrerName: string | null;
+  referrerEmail: string | null;
+  /** Embedded when the query selects `referred:referred_client_id(name, email)`. */
+  referredName: string | null;
+  referredEmail: string | null;
 };
 
 export type Enquiry = {
@@ -182,7 +210,7 @@ export type SiteData = {
   hours: OpeningHours[];
 };
 
-export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
+export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show" | "late";
 export type DepositStatus = "none" | "pending" | "paid" | "refunded" | "forfeited";
 
 export type Appointment = {
@@ -196,6 +224,10 @@ export type Appointment = {
   startsAt: string;
   endsAt: string;
   status: AppointmentStatus;
+  /** When an owner checked this client in on arrival. Independent of status. */
+  checkedInAt: string | null;
+  /** Set if whoever booked this appointment was referred by another client, for the referral program. */
+  referredByClientId: string | null;
   priceCents: number | null;
   currency: string;
   depositCents: number;

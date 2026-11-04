@@ -12,15 +12,15 @@ import {
   type SectionValues,
   type SiteContent,
 } from "@glamsite/shared/site-content";
-import { TEMPLATES, getTemplate, templateShowsSection } from "@glamsite/shared/templates";
+import { getTemplate, templateShowsSection } from "@glamsite/shared/templates";
 import type { Business } from "@glamsite/shared/types";
 import { ListInput, ScalarInput } from "@/components/editor/field-input";
 import { Field, Panel } from "@/components/page";
+import { TemplatePreviewFrame } from "@/components/template-preview-frame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { saveSection, saveTemplate } from "./actions";
+import { saveSection } from "./actions";
 
 /**
  * The website editor. Everything here comes from SITE_SECTIONS, so it works
@@ -29,12 +29,11 @@ import { saveSection, saveTemplate } from "./actions";
  */
 export function WebsiteEditor({ business, demoBaseUrl }: { business: Business; demoBaseUrl: string }) {
   const router = useRouter();
-  const [templateId, setTemplateId] = useState(business.templateId);
+  const templateId = business.templateId;
   const [draft, setDraft] = useState<SiteContent>(business.content);
   const [dirty, setDirty] = useState<Set<SectionKey>>(new Set());
   const [active, setActive] = useState<SectionKey>("hero");
   const [saving, startSaving] = useTransition();
-  const [switching, startSwitching] = useTransition();
 
   const section = SITE_SECTIONS.find((item) => item.key === active) ?? SITE_SECTIONS[0];
   const values: SectionValues = draft[active] ?? {};
@@ -62,21 +61,6 @@ export function WebsiteEditor({ business, demoBaseUrl }: { business: Business; d
     });
   }
 
-  function onTemplateChange(next: string) {
-    const previous = templateId;
-    setTemplateId(next);
-    startSwitching(async () => {
-      const result = await saveTemplate(next);
-      if (!result.ok) {
-        setTemplateId(previous);
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`Switched to the ${getTemplate(next).name} template. Your content is unchanged.`);
-      router.refresh();
-    });
-  }
-
   function sectionStatus(key: SectionKey): { label: string; muted: boolean } | null {
     if (!templateShowsSection(templateId, key)) return { label: `Not in ${template.name}`, muted: true };
     if (!isSectionEnabled(draft, key)) return { label: "Hidden", muted: true };
@@ -85,29 +69,22 @@ export function WebsiteEditor({ business, demoBaseUrl }: { business: Business; d
 
   return (
     <div className="grid gap-6">
-      <Panel
-        title="Template"
-        description="Your design. Switch any time: your text, photos, services and team stay as they are."
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={templateId} onValueChange={onTemplateChange} disabled={switching}>
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TEMPLATES.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">{template.tagline}</p>
-          <Button asChild variant="link" className="px-0">
-            <a href={`${demoBaseUrl}/demo/${template.id}`} target="_blank" rel="noopener noreferrer">
-              Preview with demo content
-            </a>
-          </Button>
+      <Panel title="Template" description="Your design. Your text, photos, services and team stay as they are.">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="w-full max-w-56 overflow-hidden rounded-xl border border-black/5 sm:w-56">
+            <TemplatePreviewFrame src={`${demoBaseUrl}/demo/${templateId}`} />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold">{template.name}</p>
+            <p className="text-sm text-muted-foreground">{template.tagline}</p>
+          </div>
+          <Link
+            href="/templates"
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-brand-soft px-4 py-2 text-sm font-medium text-brand"
+          >
+            Browse templates
+            <ArrowRightIcon className="size-4" />
+          </Link>
         </div>
       </Panel>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, StickyNoteIcon } from "lucide-react";
+import { CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, StickyNoteIcon } from "lucide-react";
 import {
   addDays,
   formatClock,
@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
 import { cn } from "@/lib/utils";
 import {
+  checkInAppointment,
   createManualAppointment,
   markDepositPaid,
   recordRefund,
@@ -37,6 +38,7 @@ const STATUS_STYLE: Record<AppointmentStatus, string> = {
   completed: "border-black/10 bg-mist text-muted-foreground",
   cancelled: "border-black/10 bg-white text-muted-foreground line-through",
   no_show: "border-rose-200 bg-rose-50 text-rose-700",
+  late: "border-orange-200 bg-orange-50 text-orange-700",
 };
 
 const SHORT_STATUS: Record<AppointmentStatus, string> = {
@@ -45,6 +47,7 @@ const SHORT_STATUS: Record<AppointmentStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_show: "No-show",
+  late: "Late",
 };
 
 const DEPOSIT_LABEL: Record<Appointment["depositStatus"], string> = {
@@ -75,7 +78,6 @@ export function AppointmentsBoard(props: Props) {
   const { pending: saving, run } = useAction();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(props.openNew);
-  const [showCancelled, setShowCancelled] = useState(false);
 
   useEffect(() => setCreating(props.openNew), [props.openNew]);
 
@@ -92,18 +94,18 @@ export function AppointmentsBoard(props: Props) {
   const forStaff = props.appointments.filter(
     (item) => props.staffFilter === "all" || item.staffId === props.staffFilter
   );
-  const cancelledCount = forStaff.filter((item) => item.status === "cancelled").length;
-  const visible = showCancelled ? forStaff : forStaff.filter((item) => item.status !== "cancelled");
+  // Cancelled appointments stay on the board (never deleted) so you can
+  // always see who was booked, who checked in, and who cancelled.
   const byDay = useMemo(() => {
     const map = new Map<string, Appointment[]>();
-    for (const item of visible) {
+    for (const item of forStaff) {
       const day = zonedParts(new Date(item.startsAt), timeZone).ymd;
       map.set(day, [...(map.get(day) ?? []), item]);
     }
     return map;
-  }, [visible, timeZone]);
+  }, [forStaff, timeZone]);
 
-  const live = visible.filter((item) => item.status !== "cancelled");
+  const live = forStaff.filter((item) => item.status !== "cancelled");
   const days = Array.from({ length: 7 }, (_, index) => addDays(week, index));
   const all = [...props.appointments, ...props.pending];
   const selected = all.find((item) => item.id === selectedId) ?? null;
@@ -173,11 +175,6 @@ export function AppointmentsBoard(props: Props) {
             <p className="text-sm text-muted-foreground">
               {live.length} appointment{live.length === 1 ? "" : "s"}
             </p>
-            {cancelledCount ? (
-              <Button variant="ghost" size="sm" aria-pressed={showCancelled} onClick={() => setShowCancelled((on) => !on)}>
-                {showCancelled ? "Hide cancelled" : `Show cancelled (${cancelledCount})`}
-              </Button>
-            ) : null}
             {props.staff.length > 1 ? (
               <Select value={props.staffFilter} onValueChange={(value) => go({ staff: value === "all" ? null : value })}>
                 <SelectTrigger className="w-44" aria-label="Show appointments for">
@@ -257,6 +254,7 @@ export function AppointmentsBoard(props: Props) {
         onSaveNotes={(item, notes) => run(() => saveInternalNotes(item.id, notes), "Notes saved")}
         onMarkDepositPaid={(item) => run(() => markDepositPaid(item.id), "Deposit marked as paid")}
         onRecordRefund={(item, amountCents) => run(() => recordRefund(item.id, amountCents), "Refund recorded")}
+        onCheckIn={(item) => run(() => checkInAppointment(item.id), "Checked in")}
       />
 
       <NewAppointmentSheet
@@ -291,6 +289,7 @@ function AppointmentSheet({
   onSaveNotes,
   onMarkDepositPaid,
   onRecordRefund,
+  onCheckIn,
 }: {
   appointment: Appointment | null;
   timeZone: string;
@@ -300,6 +299,7 @@ function AppointmentSheet({
   onSaveNotes: (item: Appointment, notes: string) => void;
   onMarkDepositPaid: (item: Appointment) => void;
   onRecordRefund: (item: Appointment, amountCents: number) => void;
+  onCheckIn: (item: Appointment) => void;
 }) {
   const [notes, setNotes] = useState("");
   const [refunding, setRefunding] = useState(false);
@@ -325,14 +325,21 @@ function AppointmentSheet({
               </SheetDescription>
             </SheetHeader>
             <div className="grid gap-5 px-4">
-              <span className={cn("w-fit rounded-full border px-2.5 py-0.5 text-xs font-medium", STATUS_STYLE[appointment.status])}>
-                {STATUS_LABELS[appointment.status]}
-                {appointment.status === "cancelled" && appointment.cancelledBy
-                  ? appointment.cancelledBy === "client"
-                    ? " by the client"
-                    : " by you"
-                  : ""}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={cn("w-fit rounded-full border px-2.5 py-0.5 text-xs font-medium", STATUS_STYLE[appointment.status])}>
+                  {STATUS_LABELS[appointment.status]}
+                  {appointment.status === "cancelled" && appointment.cancelledBy
+                    ? appointment.cancelledBy === "client"
+                      ? " by the client"
+                      : " by you"
+                    : ""}
+                </span>
+                {appointment.checkedInAt ? (
+                  <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                    <CheckCircle2Icon className="size-3.5" /> Checked in
+                  </span>
+                ) : null}
+              </div>
 
               <dl className="grid gap-3 text-sm">
                 <Detail label="Service">{appointment.serviceName}</Detail>
@@ -431,8 +438,13 @@ function AppointmentSheet({
                   Confirm appointment
                 </Button>
               ) : null}
-              {appointment.status === "confirmed" && started ? (
-                <div className="grid grid-cols-2 gap-2">
+              {appointment.status === "confirmed" && !appointment.checkedInAt ? (
+                <Button size="lg" variant="outline" disabled={saving} onClick={() => onCheckIn(appointment)}>
+                  Check in
+                </Button>
+              ) : null}
+              {(appointment.status === "confirmed" || appointment.status === "late") && started ? (
+                <div className={cn("grid gap-2", appointment.status === "confirmed" ? "grid-cols-3" : "grid-cols-2")}>
                   <Button size="lg" disabled={saving} onClick={() => onStatus(appointment, "completed", "Marked as completed")}>
                     Completed
                   </Button>
@@ -440,15 +452,21 @@ function AppointmentSheet({
                     onClick={() => onStatus(appointment, "no_show", "Marked as a no-show")}>
                     No-show
                   </Button>
+                  {appointment.status === "confirmed" ? (
+                    <Button size="lg" variant="outline" disabled={saving}
+                      onClick={() => onStatus(appointment, "late", "Marked as running late")}>
+                      Late
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
-              {appointment.status === "completed" || appointment.status === "no_show" ? (
+              {appointment.status === "completed" || appointment.status === "no_show" || appointment.status === "late" ? (
                 <Button size="lg" variant="outline" disabled={saving}
                   onClick={() => onStatus(appointment, "confirmed", "Status reset")}>
                   Undo: mark as not yet done
                 </Button>
               ) : null}
-              {appointment.status === "pending" || appointment.status === "confirmed" ? (
+              {appointment.status === "pending" || appointment.status === "confirmed" || appointment.status === "late" ? (
                 <Button size="lg" variant="ghost" className="text-destructive hover:text-destructive" disabled={saving}
                   onClick={() => onStatus(appointment, "cancelled", "Appointment cancelled")}>
                   Cancel appointment

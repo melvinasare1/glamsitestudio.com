@@ -106,7 +106,7 @@ export function depositAmountCents(
 // Appointment statuses
 // ---------------------------------------------------------------------------
 
-export const APPOINTMENT_STATUSES: AppointmentStatus[] = ["pending", "confirmed", "completed", "cancelled", "no_show"];
+export const APPOINTMENT_STATUSES: AppointmentStatus[] = ["pending", "confirmed", "completed", "cancelled", "no_show", "late"];
 
 /** Statuses that hold the time slot (matches the database's no-double-booking rule). */
 export const ACTIVE_STATUSES: AppointmentStatus[] = ["pending", "confirmed"];
@@ -117,6 +117,7 @@ export const STATUS_LABELS: Record<AppointmentStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_show: "No-show",
+  late: "Running late",
 };
 
 // ---------------------------------------------------------------------------

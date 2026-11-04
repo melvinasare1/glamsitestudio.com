@@ -4,61 +4,77 @@ import {
   BarChart3Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
-  ClockIcon,
   ContactIcon,
-  CreditCardIcon,
   ExternalLinkIcon,
+  GiftIcon,
   LayoutDashboardIcon,
+  LayoutTemplateIcon,
   LifeBuoyIcon,
   MailIcon,
   PaletteIcon,
   PiggyBankIcon,
   ScissorsIcon,
+  Settings2Icon,
   SettingsIcon,
   TagIcon,
   UsersIcon,
-  type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { NavMain } from "@/components/nav-main";
+import { NavMain, type NavSection } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { useBusiness } from "@/lib/business-context";
 
-type NavItem = { title: string; url: string; icon: LucideIcon; external?: boolean; badge?: number };
-
-const NAV: NavItem[] = [
-  { title: "Overview", url: "/", icon: LayoutDashboardIcon },
-  { title: "Appointments", url: "/appointments", icon: CalendarDaysIcon },
-  { title: "Analytics", url: "/analytics", icon: BarChart3Icon },
-  { title: "Customers", url: "/customers", icon: ContactIcon },
-  { title: "Website", url: "/website", icon: PaletteIcon },
-  { title: "Services", url: "/services", icon: ScissorsIcon },
-  { title: "Team", url: "/team", icon: UsersIcon },
-  { title: "Opening hours", url: "/hours", icon: ClockIcon },
-  { title: "Booking", url: "/booking", icon: CalendarClockIcon },
-  { title: "Discounts", url: "/discounts", icon: TagIcon },
-  { title: "Messages", url: "/messages", icon: MailIcon },
-  { title: "Business details", url: "/details", icon: SettingsIcon },
-  { title: "Finance", url: "/finance", icon: PiggyBankIcon },
-  { title: "Billing", url: "/billing", icon: CreditCardIcon },
-  { title: "Support", url: "/support", icon: LifeBuoyIcon },
+const SECTIONS: NavSection[] = [
+  { items: [{ title: "Overview", url: "/", icon: LayoutDashboardIcon }] },
+  {
+    label: "Bookings",
+    items: [
+      { title: "Appointments", url: "/appointments", icon: CalendarDaysIcon },
+      { title: "Customers", url: "/customers", icon: ContactIcon },
+      { title: "Booking", url: "/booking", icon: CalendarClockIcon },
+      { title: "Discounts", url: "/discounts", icon: TagIcon },
+      { title: "Referrals", url: "/referrals", icon: GiftIcon },
+    ],
+  },
+  {
+    label: "Site",
+    items: [
+      { title: "Website", url: "/website", icon: PaletteIcon },
+      { title: "Templates", url: "/templates", icon: LayoutTemplateIcon },
+      { title: "Services", url: "/services", icon: ScissorsIcon },
+      { title: "Team", url: "/team", icon: UsersIcon },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { title: "Analytics", url: "/analytics", icon: BarChart3Icon },
+      { title: "Finance", url: "/finance", icon: PiggyBankIcon },
+      { title: "Messages", url: "/messages", icon: MailIcon },
+      { title: "Business details", url: "/details", icon: SettingsIcon },
+      { title: "Settings", url: "/settings", icon: Settings2Icon },
+    ],
+  },
+  { items: [{ title: "Support", url: "/support", icon: LifeBuoyIcon }] },
 ];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { business, siteUrl, pendingCount } = useBusiness();
-  const nav = NAV.map((item) =>
-    item.url === "/appointments" ? { ...item, badge: pendingCount } : item
-  );
-  const items =
+
+  const sections = SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.map((item) => (item.url === "/appointments" ? { ...item, badge: pendingCount } : item)),
+  }));
+  const withSite: NavSection[] =
     business.status === "live"
-      ? [...nav, { title: "View site", url: siteUrl, icon: ExternalLinkIcon, external: true }]
-      : nav;
+      ? [...sections, { items: [{ title: "View site", url: siteUrl, icon: ExternalLinkIcon, external: true }] }]
+      : sections;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarContent className="pt-2">
-        <NavMain items={items} pathname={pathname} />
+        <NavMain sections={withSite} pathname={pathname} />
       </SidebarContent>
     </Sidebar>
   );

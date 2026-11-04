@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreditCardIcon } from "lucide-react";
 import { appointmentFromRow } from "@glamsite/shared/mappers";
 import { formatMoney } from "@glamsite/shared/format";
 import { createClient } from "@glamsite/shared/supabase/server";
@@ -34,7 +35,7 @@ export default async function FinancePage({ searchParams }: Props) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("appointments")
-    .select("*, clients(name, email, phone)")
+    .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone)")
     .eq("business_id", business.id)
     .gte("starts_at", since)
     .order("starts_at");
@@ -51,19 +52,27 @@ export default async function FinancePage({ searchParams }: Props) {
         title="Finance"
         description="From appointments only — product sales aren't tracked yet."
         actions={
-          <div className="flex gap-1 rounded-lg border border-black/10 bg-white p-1">
-            {RANGES.map((item) => (
-              <Link
-                key={item.days}
-                href={{ query: { range: item.days } }}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  item.days === days ? "bg-mist text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="flex gap-1 rounded-lg border border-black/10 bg-white p-1">
+              {RANGES.map((item) => (
+                <Link
+                  key={item.days}
+                  href={{ query: { range: item.days } }}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                    item.days === days ? "bg-mist text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+            <Link
+              href="/billing"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 text-sm font-medium hover:bg-mist"
+            >
+              <CreditCardIcon className="size-4" /> Billing
+            </Link>
+          </>
         }
       />
       <PageBody className="max-w-6xl">

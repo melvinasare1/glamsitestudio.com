@@ -10,7 +10,13 @@ import {
   zonedTimeToInstant,
 } from "@glamsite/shared/booking";
 import { siteLink } from "@glamsite/shared/domain";
-import { clientBookingEmail, clientCancelledEmail, sendEmail, type BookingEmailDetails } from "@glamsite/shared/email";
+import {
+  clientBookingEmail,
+  clientCancelledEmail,
+  referralRewardEmail,
+  sendEmail,
+  type BookingEmailDetails,
+} from "@glamsite/shared/email";
 import { formatAddress, formatMoney } from "@glamsite/shared/format";
 import { appointmentFromRow } from "@glamsite/shared/mappers";
 import { getWebUrl } from "@glamsite/shared/supabase/env";
@@ -20,9 +26,10 @@ import { dbError, fail, ownerContext, type ActionResult, type ServerClient } fro
 /** Which status changes an owner can make from each status. */
 const NEXT: Record<AppointmentStatus, AppointmentStatus[]> = {
   pending: ["confirmed", "cancelled"],
-  confirmed: ["completed", "no_show", "cancelled"],
+  confirmed: ["completed", "no_show", "late", "cancelled"],
   completed: ["confirmed", "no_show"],
   no_show: ["confirmed", "completed"],
+  late: ["completed", "no_show", "confirmed", "cancelled"],
   cancelled: [],
 };
 
@@ -41,7 +48,7 @@ async function notifyClient(
   const [{ data: row }, { data: settings }] = await Promise.all([
     supabase
       .from("appointments")
-      .select("*, clients(name, email, phone), staff(name)")
+      .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
       .eq("id", appointmentId)
       .eq("business_id", business.id)
       .maybeSingle(),
@@ -74,6 +81,94 @@ async function notifyClient(
       ? clientBookingEmail(details)
       : clientCancelledEmail(details, true, siteLink(business, "/book", webUrl));
   await sendEmail({ to: appointment.client.email, ...message, fromName: business.name, replyTo: business.email });
+}
+
+/**
+ * When a referred client's first completed appointment lands, reward whoever
+ * referred them with a one-time discount code (rule 8: a discount a client
+ * redeems at checkout, not a stored credit/wallet). Best effort — the status
+ * change stands either way.
+ */
+async function processReferralReward(supabase: ServerClient, business: Business, appointmentId: string) {
+  if (!business.referralRewardCents || business.referralRewardCents <= 0) return;
+
+  const { data: appointment } = await supabase
+    .from("appointments")
+    .select("client_id")
+    .eq("id", appointmentId)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  const referredClientId = appointment?.client_id as string | null;
+  if (!referredClientId) return;
+
+  const { data: referral } = await supabase
+    .from("client_referrals")
+    .select("*")
+    .eq("business_id", business.id)
+    .eq("referred_client_id", referredClientId)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!referral) return;
+
+  // Only reward on the referred client's *first* completed appointment.
+  const { count } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", business.id)
+    .eq("client_id", referredClientId)
+    .eq("status", "completed");
+  if ((count ?? 0) !== 1) return;
+
+  const { data: referrer } = await supabase
+    .from("clients")
+    .select("name, email")
+    .eq("id", referral.referrer_client_id as string)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  const { data: referred } = await supabase
+    .from("clients")
+    .select("name")
+    .eq("id", referredClientId)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  if (!referrer?.email) return;
+
+  const code = `REF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const { data: discount, error: discountError } = await supabase
+    .from("discount_codes")
+    .insert({
+      business_id: business.id,
+      code,
+      kind: "fixed",
+      amount_off_cents: business.referralRewardCents,
+      max_redemptions: 1,
+    })
+    .select("id")
+    .single();
+  if (discountError || !discount) {
+    console.error("[referrals] reward code creation failed", discountError);
+    return;
+  }
+
+  const { data: claimed } = await supabase
+    .from("client_referrals")
+    .update({ status: "rewarded", reward_discount_code_id: discount.id, rewarded_at: new Date().toISOString() })
+    .eq("id", referral.id as string)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return; // someone else already claimed/raced this; the unused code is harmless
+
+  const webUrl = getWebUrl();
+  const message = referralRewardEmail(
+    business.name,
+    (referrer.name as string) || "there",
+    (referred?.name as string) || "your friend",
+    code,
+    formatMoney(business.referralRewardCents, business.currency) + " off",
+    siteLink(business, "/book", webUrl)
+  );
+  await sendEmail({ to: referrer.email as string, ...message, fromName: business.name, replyTo: business.email });
 }
 
 export async function setAppointmentStatus(id: string, status: AppointmentStatus): Promise<ActionResult> {
@@ -117,7 +212,28 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
   const upcoming = new Date(current.starts_at as string).getTime() > Date.now();
   if (upcoming && from === "pending" && status === "confirmed") await notifyClient(supabase, business, id, "confirmed");
   if (upcoming && status === "cancelled") await notifyClient(supabase, business, id, "cancelled");
+  if (status === "completed") await processReferralReward(supabase, business, id);
 
+  return done();
+}
+
+/**
+ * Owner checked this client in on arrival. Independent of status — it's just
+ * a marker the sheet shows — so it doesn't go through the NEXT transition map.
+ */
+export async function checkInAppointment(id: string): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+  const { supabase, business } = ctx;
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({ checked_in_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .eq("status", "confirmed")
+    .is("checked_in_at", null);
+  if (error) return dbError("check in appointment", error);
   return done();
 }
 

@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
+import { setAppointmentStatus } from "../appointments/actions";
 import { saveClient, type ClientInput } from "./actions";
 
 export type ClientVisit = {
+  id: string;
   serviceName: string;
   startsAt: string;
   status: string;
@@ -26,7 +28,11 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_show: "No-show",
+  late: "Late",
 };
+
+/** Statuses a client might ask the owner to cancel on their behalf. */
+const CANCELLABLE_STATUSES = new Set(["pending", "confirmed", "late"]);
 
 function toDraft(client: Client | null): ClientInput {
   return {
@@ -183,20 +189,41 @@ export function CustomersManager({
                       <p className="text-sm text-muted-foreground">No appointments yet.</p>
                     ) : (
                       <ul className="divide-y divide-black/5 rounded-xl border border-black/5">
-                        {selectedVisits.map((visit, index) => (
-                          <li key={index} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">{visit.serviceName}</p>
-                              <p className="text-muted-foreground">
-                                {new Date(visit.startsAt).toLocaleDateString()} ·{" "}
-                                {STATUS_LABEL[visit.status] ?? visit.status}
-                              </p>
-                            </div>
-                            <p className="shrink-0 font-medium">
-                              {visit.priceCents == null ? "—" : formatMoney(visit.priceCents, visit.currency)}
-                            </p>
-                          </li>
-                        ))}
+                        {selectedVisits.map((visit) => {
+                          const upcoming = new Date(visit.startsAt).getTime() > Date.now();
+                          const cancellable = upcoming && CANCELLABLE_STATUSES.has(visit.status);
+                          return (
+                            <li key={visit.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">{visit.serviceName}</p>
+                                <p className="text-muted-foreground">
+                                  {new Date(visit.startsAt).toLocaleDateString()} ·{" "}
+                                  {STATUS_LABEL[visit.status] ?? visit.status}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-3">
+                                <p className="font-medium">
+                                  {visit.priceCents == null ? "—" : formatMoney(visit.priceCents, visit.currency)}
+                                </p>
+                                {cancellable ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive hover:text-destructive"
+                                    disabled={pending}
+                                    onClick={() => {
+                                      if (!window.confirm(`Cancel this ${visit.serviceName} appointment on their behalf?`)) return;
+                                      run(() => setAppointmentStatus(visit.id, "cancelled"), "Appointment cancelled");
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>

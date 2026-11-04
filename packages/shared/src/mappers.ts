@@ -12,6 +12,7 @@ import type {
   BookingMode,
   BusinessStatus,
   Client,
+  ClientReferral,
   DepositStatus,
   DiscountCode,
   DiscountKind,
@@ -20,6 +21,7 @@ import type {
   Enquiry,
   HostingTier,
   OpeningHours,
+  ReferralStatus,
   Service,
   ServiceCategory,
   StaffMember,
@@ -77,6 +79,9 @@ export function businessFromRow(row: Row): Business {
     timezone: str(row.timezone, "Europe/London"),
     currency: str(row.currency, "GBP"),
     taxRatePercent: floatOrNull(row.tax_rate_percent),
+    policiesText: strOrNull(row.policies_text),
+    termsText: strOrNull(row.terms_text),
+    referralRewardCents: intOrNull(row.referral_reward_cents),
     bookingMode: oneOf<BookingMode>(row.booking_mode, ["none", "link", "glamsite"], "none"),
     bookingUrl: str(row.booking_url),
     content: parseSiteContent(row.content),
@@ -199,8 +204,29 @@ export function clientFromRow(row: Row): Client {
     email: str(row.email),
     phone: str(row.phone),
     notes: str(row.notes),
+    referralCode: str(row.referral_code),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
+  };
+}
+
+/** `referrer:referrer_client_id(name, email)` and `referred:referred_client_id(name, email)` may be embedded. */
+export function clientReferralFromRow(row: Row): ClientReferral {
+  const referrer = embedded(row.referrer);
+  const referred = embedded(row.referred);
+  return {
+    id: str(row.id),
+    businessId: str(row.business_id),
+    referrerClientId: str(row.referrer_client_id),
+    referredClientId: str(row.referred_client_id),
+    status: oneOf<ReferralStatus>(row.status, ["pending", "rewarded"], "pending"),
+    rewardDiscountCodeId: strOrNull(row.reward_discount_code_id),
+    createdAt: str(row.created_at),
+    rewardedAt: strOrNull(row.rewarded_at),
+    referrerName: referrer ? str(referrer.name) : null,
+    referrerEmail: referrer ? str(referrer.email) : null,
+    referredName: referred ? str(referred.name) : null,
+    referredEmail: referred ? str(referred.email) : null,
   };
 }
 
@@ -237,9 +263,11 @@ export function appointmentFromRow(row: Row): Appointment {
     endsAt: str(row.ends_at),
     status: oneOf<AppointmentStatus>(
       row.status,
-      ["pending", "confirmed", "completed", "cancelled", "no_show"],
+      ["pending", "confirmed", "completed", "cancelled", "no_show", "late"],
       "confirmed"
     ),
+    checkedInAt: strOrNull(row.checked_in_at),
+    referredByClientId: strOrNull(row.referred_by_client_id),
     priceCents: intOrNull(row.price_cents),
     currency: str(row.currency, "GBP"),
     depositCents: int(row.deposit_cents),

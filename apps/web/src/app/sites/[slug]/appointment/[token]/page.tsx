@@ -5,7 +5,8 @@ import { sitePath } from "@glamsite/shared/domain";
 import { formatAddress, formatMoney } from "@glamsite/shared/format";
 import { BookingFrame } from "@/components/booking/BookingFrame";
 import { CancelAppointment } from "@/components/booking/CancelAppointment";
-import { getAppointmentByToken } from "@/lib/booking";
+import { ReferAFriend } from "@/components/booking/ReferAFriend";
+import { getAppointmentByToken, getReferralLink } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function AppointmentPage({ params }: Props) {
   const cancelled = appointment.status === "cancelled";
   const past = new Date(appointment.endsAt).getTime() < Date.now();
   const address = formatAddress(business.address);
+  const referralLink = cancelled ? null : await getReferralLink(business, appointment.clientId);
 
   const heading = cancelled
     ? "This appointment is cancelled"
@@ -74,6 +76,13 @@ export default async function AppointmentPage({ params }: Props) {
             <p className="font-medium">Booking policy</p>
             <p className="mt-1 whitespace-pre-line text-[#4a4145]">{rules.policyText.trim()}</p>
           </div>
+        ) : null}
+
+        {referralLink ? (
+          <ReferAFriend
+            link={referralLink}
+            rewardText={`you'll get ${formatMoney(business.referralRewardCents as number, business.currency)} off your next visit`}
+          />
         ) : null}
       </section>
     </BookingFrame>

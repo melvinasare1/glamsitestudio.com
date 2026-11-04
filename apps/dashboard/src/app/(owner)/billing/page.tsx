@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { EMAIL_QUOTA_BY_TIER, hasCampaignsAccess } from "@glamsite/shared/billing";
+import { EMAIL_QUOTA_BY_TIER, HOSTING_TIER_LABEL, hasCampaignsAccess } from "@glamsite/shared/billing";
 import { PageBody, PageHeader, Panel } from "@/components/page";
 import { getDashboardSession } from "@/lib/business";
 import { ConnectStripeButton } from "./connect-stripe-button";
@@ -7,6 +6,7 @@ import { EmailCampaignsPanel } from "./email-campaigns-panel";
 import { EmailNotificationsForm } from "./email-notifications-form";
 import { LaunchButton } from "./launch-button";
 import { ManageBillingButton } from "./manage-billing-button";
+import { PlanPicker } from "./plan-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,6 @@ const STATUS: Record<string, string> = {
   unpaid: "Unpaid",
   incomplete: "Incomplete",
 };
-
-const HOSTING_TIER_LABEL: Record<string, string> = { basic: "Basic", popular: "Popular", premium: "Premium" };
 
 export default async function BillingPage() {
   const session = await getDashboardSession();
@@ -51,24 +49,32 @@ export default async function BillingPage() {
           {launched ? (
             <>
               <p className="mt-5 text-sm text-muted-foreground">
-                Manage your card and invoices on Stripe. It opens in the same tab and brings you back here. Want a
-                bigger hosting tier or done-for-you design?{" "}
-                <Link href="/support" className="font-medium text-brand underline-offset-4 hover:underline">
-                  Get in touch
-                </Link>{" "}
-                for now.
+                Manage your card and invoices on Stripe. It opens in the same tab and brings you back here.
               </p>
               <ManageBillingButton />
             </>
           ) : (
-            <>
-              <p className="mt-5 text-sm text-muted-foreground">
-                Your site stays private until you launch it. $1 for your first 3 months of Basic hosting. Upgrade to a
-                bigger plan any time after you're live.
-              </p>
-              <LaunchButton />
-            </>
+            <p className="mt-5 text-sm text-muted-foreground">
+              Your site stays private until you launch it. $1 for your first 3 months, on whichever plan you pick
+              below.
+            </p>
           )}
+        </Panel>
+
+        <Panel
+          title="Choose your plan"
+          description={
+            launched
+              ? "Changes apply right away; your next invoice is prorated."
+              : "Pick a plan, then launch below. The $1-for-3-months promo applies either way."
+          }
+        >
+          <PlanPicker currentTier={hostingTier} currency="usd" />
+          {!launched ? (
+            <div className="mt-5">
+              <LaunchButton />
+            </div>
+          ) : null}
         </Panel>
 
         <Panel title="Get paid for bookings">
