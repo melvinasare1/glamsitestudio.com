@@ -24,15 +24,17 @@ both in Ireland (`eu-west-1`):
 | Production ("glamsitestudio@gmail.com's Project") | `ufrfhimjmvltpdtcoord` | Production deployments only |
 | `glamsitestudio-staging` | `idlqgpervgglazzozhkb` | Local development and Vercel previews (rule 10) |
 
-Status (14 Oct 2026): `20261014090000_baseline.sql` (after the one-off
-`supabase/one-off/20261014-remove-ansaa-schema.sql`) and
-`20261014100000_fk_indexes.sql` applied to both. Security advisor is clean
-apart from `leads` having no policies, which is intended (server only).
+Status (2 Nov 2026): everything in `supabase/migrations/` is applied to both,
+up to `20261102090000_booking_core.sql`. Security advisor is clean apart from
+`leads` having no policies, which is intended (server only). Every change,
+with times and how to undo it, is in `docs/database-changes.md`.
 
 Setup for each project:
 
-1. Apply `supabase/migrations/` in timestamp order. Migrations containing
-   `drop` statements need approval in Supabase; run them in the SQL Editor.
+1. Apply `supabase/migrations/` in timestamp order, following
+   `docs/database-changes.md` (staging first, undo script ready, log entry).
+   Migrations containing `drop` statements need approval in Supabase; run
+   them in the SQL Editor and record that in the log.
 2. Confirm the public `site-media` bucket exists (created by the baseline).
 3. Auth → URL configuration: site URL = the dashboard URL; add redirect URLs
    for `/auth/callback` on the dashboard domain (and `localhost:3001` on
