@@ -23,6 +23,7 @@ function demoBusiness(templateId: string, name: string, content: SiteContent): B
     address: { line1: "12 Park Road", line2: "", city: "London", postcode: "N8 8TE", country: "GB" },
     timezone: "Europe/London",
     currency: "GBP",
+    taxRatePercent: null,
     bookingMode: "link",
     bookingUrl: "#book",
     content,
@@ -59,6 +60,7 @@ function service(
     isVisible: true,
     isBookable: true,
     position,
+    imageUrl: "",
     ...extra,
   };
 }
