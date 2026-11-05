@@ -295,6 +295,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Matches the `code` check constraint on discount_codes. */
 const DISCOUNT_CODE_RE = /^[A-Za-z0-9-]{1,40}$/;
+/** Matches how clients.referral_code is generated (see migrations). */
+const REFERRAL_CODE_RE = /^[A-Za-z0-9]{1,40}$/;
 
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
@@ -311,6 +313,8 @@ export type BookingRequest = {
   notes: string;
   /** A code the client typed in, if any. Only meaningful when payment is due. */
   discountCode: string | null;
+  /** Another client's referral code, if they came via a referral link or typed one in. */
+  referralCode: string | null;
 };
 
 function text(value: unknown, max: number): string {
@@ -333,6 +337,7 @@ export function parseBookingRequest(
   const phone = text(body.phone, 40);
   const notes = text(body.notes, 1000);
   const discountCodeRaw = text(body.discountCode, 40);
+  const referralCodeRaw = text(body.referralCode, 40);
 
   if (!slug || !isUuid(serviceId)) return { ok: false, error: "Choose a service." };
   if (staffRaw && !isUuid(staffRaw)) return { ok: false, error: "Choose who you'd like to see." };
@@ -341,6 +346,8 @@ export function parseBookingRequest(
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
   if (phone.replace(/\D/g, "").length < 7) return { ok: false, error: "Please enter a phone number." };
   if (discountCodeRaw && !DISCOUNT_CODE_RE.test(discountCodeRaw)) return { ok: false, error: "That code isn't valid." };
+  // A bad referral code shouldn't block a booking; it just doesn't earn anyone a reward.
+  const referralCode = referralCodeRaw && REFERRAL_CODE_RE.test(referralCodeRaw) ? referralCodeRaw : null;
 
   return {
     ok: true,
@@ -354,6 +361,7 @@ export function parseBookingRequest(
       phone,
       notes,
       discountCode: discountCodeRaw || null,
+      referralCode,
     },
   };
 }
@@ -425,6 +433,45 @@ async function redeemDiscountCode(supabase: SupabaseClient, match: DiscountMatch
     .eq("id", match.id)
     .eq("redemption_count", match.redemptionCount);
   if (error) console.error("[booking] discount redemption count failed", error);
+}
+
+/**
+ * Links a new client to whoever referred them, if a valid referral code was
+ * given. Returns the referrer's client id to stamp onto the appointment, or
+ * null if there's nothing to link (no code, unknown code, or self-referral).
+ * Doesn't create the reward itself -- that happens later, when the referred
+ * client's first appointment is marked completed (see
+ * processReferralReward in the dashboard's appointments actions).
+ */
+async function linkReferral(
+  supabase: SupabaseClient,
+  businessId: string,
+  clientId: string,
+  referralCode: string | null
+): Promise<string | null> {
+  if (!referralCode) return null;
+
+  const { data: referrer, error: lookupError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("business_id", businessId)
+    .ilike("referral_code", referralCode)
+    .maybeSingle();
+  if (lookupError || !referrer) return null;
+
+  const referrerId = referrer.id as string;
+  if (referrerId === clientId) return null; // no self-referral
+
+  const { error: insertError } = await supabase.from("client_referrals").insert({
+    business_id: businessId,
+    referrer_client_id: referrerId,
+    referred_client_id: clientId,
+  });
+  if (insertError && insertError.code !== "23505") {
+    // 23505: this client was already referred (unique per referred client) -- fine, just don't relink.
+    console.error("[booking] referral link failed", insertError);
+  }
+  return referrerId;
 }
 
 async function ownerEmail(supabase: SupabaseClient, business: Business): Promise<string> {
@@ -567,6 +614,7 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
     return { ok: false, error: "Couldn't save your details. Please try again.", status: 500 };
   }
   const clientId = clientResult.data as string;
+  const referredByClientId = await linkReferral(supabase, business.id, clientId, request.referralCode);
   const finalStatus = rules.autoConfirm ? "confirmed" : "pending";
   const insertStatus = collectPayment ? "pending" : finalStatus;
 
@@ -601,6 +649,7 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
         client_notes: request.notes,
         discount_code: discountMatch?.code ?? null,
         discount_cents: discountCents,
+        referred_by_client_id: referredByClientId,
       })
       .select("id, manage_token")
       .single();
@@ -728,6 +777,26 @@ export type ManagedAppointment = {
   canCancel: boolean;
 };
 
+/**
+ * A client's own referral link, if the salon has the referral program on.
+ * Shown on their manage-appointment page so they can share it after booking.
+ */
+export async function getReferralLink(business: Business, clientId: string | null): Promise<string | null> {
+  if (!clientId || business.referralRewardCents == null) return null;
+  const supabase = admin();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("clients")
+    .select("referral_code")
+    .eq("id", clientId)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  const code = data?.referral_code as string | undefined;
+  if (!code) return null;
+  return siteLink(business, `/book?ref=${encodeURIComponent(code)}`, getWebUrl());
+}
+
 export async function getAppointmentByToken(token: string): Promise<ManagedAppointment | null> {
   if (!isUuid(token)) return null;
   const supabase = admin();
@@ -735,7 +804,7 @@ export async function getAppointmentByToken(token: string): Promise<ManagedAppoi
 
   const { data: row, error } = await supabase
     .from("appointments")
-    .select("*, clients(name, email, phone), staff(name)")
+    .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
     .eq("manage_token", token)
     .maybeSingle();
   if (error) console.error("[booking] token lookup failed", error.message);

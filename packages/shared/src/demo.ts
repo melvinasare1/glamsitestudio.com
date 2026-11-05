@@ -24,6 +24,9 @@ function demoBusiness(templateId: string, name: string, content: SiteContent): B
     timezone: "Europe/London",
     currency: "GBP",
     taxRatePercent: null,
+    policiesText: null,
+    termsText: null,
+    referralRewardCents: null,
     bookingMode: "link",
     bookingUrl: "#book",
     content,
@@ -55,12 +58,12 @@ function service(
     durationMinutes,
     priceCents,
     priceIsFrom: false,
+    imageUrl: "",
     bufferMinutes: 0,
     depositCents: null,
     isVisible: true,
     isBookable: true,
     position,
-    imageUrl: "",
     ...extra,
   };
 }

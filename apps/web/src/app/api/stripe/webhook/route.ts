@@ -120,7 +120,7 @@ async function confirmBookingPayment(session: Stripe.Checkout.Session): Promise<
   const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("appointments")
-    .select("*, clients(name, email, phone), staff(name)")
+    .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
     .eq("id", appointmentId)
     .maybeSingle();
   if (error || !row) {

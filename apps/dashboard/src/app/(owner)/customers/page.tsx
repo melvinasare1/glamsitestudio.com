@@ -13,7 +13,7 @@ export default async function CustomersPage() {
     supabase.from("clients").select("*").eq("business_id", business.id).order("name"),
     supabase
       .from("appointments")
-      .select("client_id, service_name, starts_at, status, price_cents, currency")
+      .select("id, client_id, service_name, starts_at, status, price_cents, currency")
       .eq("business_id", business.id)
       .not("client_id", "is", null)
       .order("starts_at", { ascending: false }),
@@ -28,6 +28,7 @@ export default async function CustomersPage() {
     const clientId = row.client_id as string | null;
     if (!clientId) continue;
     (visitsByClient[clientId] ??= []).push({
+      id: row.id as string,
       serviceName: row.service_name as string,
       startsAt: row.starts_at as string,
       status: row.status as string,

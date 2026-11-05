@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AuthFrame } from "@/components/auth-frame";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { createClient } from "@glamsite/shared/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
 import { getDashboardSession } from "@/lib/business";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect("/login");
 
   if (!session.business) {
+    if (isAdminEmail(session.user.email)) redirect("/admin");
+
     return (
       <AuthFrame kicker="Glam Site Studios" title="Your site isn't set up yet">
         <p className="mt-6 text-sm text-ink-700">

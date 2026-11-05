@@ -36,6 +36,8 @@ type Props = {
   manageBase: string;
   initialServiceId?: string;
   initialStaffId?: string;
+  /** From a `?ref=` link a referrer shared, if any. Not shown in the form. */
+  initialReferralCode?: string;
   bookingHeading: string;
 };
 
@@ -261,6 +263,7 @@ export function BookingFlow(props: Props) {
           phone: details.phone,
           notes: details.notes,
           discountCode: details.discountCode,
+          referralCode: props.initialReferralCode ?? "",
           website: details.website,
         }),
       });

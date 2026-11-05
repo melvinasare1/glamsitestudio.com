@@ -17,6 +17,14 @@ export const HOSTING_TIER_PRICE_CENTS: Record<HostingTier, number> = {
   premium: 6000,
 };
 
+export const HOSTING_TIER_LABEL: Record<HostingTier, string> = {
+  basic: "Basic",
+  popular: "Popular",
+  premium: "Premium",
+};
+
+export const HOSTING_TIERS: readonly HostingTier[] = ["basic", "popular", "premium"];
+
 /** One-off done-for-you setup fee, in cents. */
 export const DONE_FOR_YOU_PRICE_CENTS = 9900;
 

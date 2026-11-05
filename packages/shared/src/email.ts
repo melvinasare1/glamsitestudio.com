@@ -214,6 +214,29 @@ export function clientCancelledEmail(d: BookingEmailDetails, byBusiness: boolean
   };
 }
 
+// ---------------------------------------------------------------------------
+// Referral templates
+// ---------------------------------------------------------------------------
+
+/** To a referrer, once the friend they referred completes their first appointment. */
+export function referralRewardEmail(
+  businessName: string,
+  referrerName: string,
+  referredName: string,
+  code: string,
+  amountOffText: string,
+  bookAgainUrl: string
+): Rendered {
+  const first = referrerName.split(" ")[0] || "there";
+  const intro = `Hi ${escapeHtml(first)}, ${escapeHtml(referredName)} just had their first appointment with <strong>${escapeHtml(businessName)}</strong> thanks to you. Here's ${escapeHtml(amountOffText)} off your next visit.`;
+  const table = `<tr><td style="padding:6px 16px 6px 0;color:#7a6f74;vertical-align:top;white-space:nowrap;">Your code</td><td style="padding:6px 0;color:#2b1631;font-weight:600;letter-spacing:0.5px;">${escapeHtml(code)}</td></tr>`;
+  return {
+    subject: `You earned ${amountOffText} off at ${businessName}`,
+    html: layout("You earned a reward", intro, table, { label: "Book your next visit", href: bookAgainUrl }, "Enter this code at checkout. One-time use."),
+    text: `You earned a reward\n\n${intro.replace(/<[^>]+>/g, "")}\n\nCode: ${code}\n\nBook: ${bookAgainUrl}`,
+  };
+}
+
 /** To the owner, when a client cancels online. */
 export function ownerClientCancelledEmail(d: BookingEmailDetails, dashboardUrl: string): Rendered {
   const table = rows([

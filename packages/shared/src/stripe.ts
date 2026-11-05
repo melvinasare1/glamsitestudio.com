@@ -14,6 +14,37 @@ export function getStripe(): Stripe {
   return client;
 }
 
+/**
+ * Turns a caught Stripe/config error into a message safe to show an owner.
+ * Stripe's own error messages (e.g. "Connect isn't enabled for this account")
+ * never contain the API key or other secrets, so these are safe to surface
+ * as-is instead of hiding behind a generic "try again" string that makes
+ * every failure look identical. Falls back to `fallback` for anything else
+ * (e.g. a Supabase/network error, which could contain unrelated detail).
+ */
+export function stripeErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Stripe.errors.StripeError) return error.message;
+  if (error instanceof Error && error.message === "Stripe is not configured. Set STRIPE_SECRET_KEY.") {
+    return error.message;
+  }
+  return fallback;
+}
+
+const HOSTING_PRODUCT_ID = "glamsite-hosting";
+
+/**
+ * A single persistent Stripe Product for hosting, shared across tiers (the
+ * price varies, not the product) — needed because subscription item updates
+ * require an existing product id, unlike Checkout's inline product_data.
+ */
+export async function getOrCreateHostingProduct(stripe: Stripe): Promise<Stripe.Product> {
+  try {
+    return await stripe.products.retrieve(HOSTING_PRODUCT_ID);
+  } catch {
+    return await stripe.products.create({ id: HOSTING_PRODUCT_ID, name: "Glam Site Studios hosting" });
+  }
+}
+
 export const FIRST_MONTHS_AT_DOLLAR = 3;
 
 /**

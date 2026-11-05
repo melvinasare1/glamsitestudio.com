@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { canCustomizeEmailToggles, HOSTING_TIER_PRICE_CENTS } from "@glamsite/shared/billing";
+import { canCustomizeEmailToggles, HOSTING_TIER_LABEL, HOSTING_TIER_PRICE_CENTS, HOSTING_TIERS } from "@glamsite/shared/billing";
 import { billingFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
 import { getDashboardUrl } from "@glamsite/shared/supabase/env";
-import { getOrCreateFirstMonthCoupon, getStripe } from "@glamsite/shared/stripe";
-import type { EmailNotificationSettings } from "@glamsite/shared/types";
+import { getOrCreateFirstMonthCoupon, getOrCreateHostingProduct, getStripe, stripeErrorMessage } from "@glamsite/shared/stripe";
+import type { EmailNotificationSettings, HostingTier } from "@glamsite/shared/types";
 import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
 
 const done = (): ActionResult => {
@@ -58,7 +58,7 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
 
   const { data: billingRow } = await ctx.supabase
     .from("business_billing")
-    .select("subscription_status")
+    .select("subscription_status, hosting_tier")
     .eq("business_id", ctx.business.id)
     .maybeSingle();
   if (billingRow?.subscription_status === "active" || billingRow?.subscription_status === "trialing") {
@@ -66,7 +66,10 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
   }
   if (!ctx.business.email) return { ok: false, error: "Add a contact email in Business details first." };
 
-  const hostingPriceCents = HOSTING_TIER_PRICE_CENTS.basic;
+  const tier: HostingTier = HOSTING_TIERS.includes(billingRow?.hosting_tier as HostingTier)
+    ? (billingRow!.hosting_tier as HostingTier)
+    : "basic";
+  const hostingPriceCents = HOSTING_TIER_PRICE_CENTS[tier];
 
   try {
     const stripe = getStripe();
@@ -78,7 +81,7 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
         {
           price_data: {
             currency: "usd",
-            product_data: { name: "Glam Site Studios hosting: Basic" },
+            product_data: { name: `Glam Site Studios hosting: ${HOSTING_TIER_LABEL[tier]}` },
             unit_amount: hostingPriceCents,
             recurring: { interval: "month" },
           },
@@ -97,6 +100,66 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
     console.error("[billing] launch checkout failed", error);
     return { ok: false, error: "Couldn't start checkout. Try again." };
   }
+}
+
+/**
+ * Owner-initiated plan change. Before launch this just updates the tier
+ * that startLaunchCheckout will use; once live, it updates the real Stripe
+ * subscription's price (prorated) so the next invoice reflects it. Owners
+ * only have `select` on business_billing (see startConnectOnboarding), so
+ * the write goes through the admin client.
+ */
+export async function changeHostingTier(tier: HostingTier): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+  if (!HOSTING_TIERS.includes(tier)) return fail("Choose a valid plan.");
+
+  const { data: billingRow } = await ctx.supabase
+    .from("business_billing")
+    .select("*")
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (!billingRow) return fail("Nothing to change yet.");
+  const billing = billingFromRow(billingRow);
+  if (billing.hostingTier === tier) return fail("You're already on this plan.");
+
+  const launched = billing.subscriptionStatus === "active" || billing.subscriptionStatus === "trialing";
+  if (launched) {
+    if (!billing.stripeSubscriptionId) return dbError("change hosting tier", null);
+    try {
+      const stripe = getStripe();
+      const [subscription, product] = await Promise.all([
+        stripe.subscriptions.retrieve(billing.stripeSubscriptionId),
+        getOrCreateHostingProduct(stripe),
+      ]);
+      const item = subscription.items.data[0];
+      if (!item) return fail("Couldn't change your plan. Try again.");
+      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+        items: [
+          {
+            id: item.id,
+            price_data: {
+              currency: "usd",
+              product: product.id,
+              unit_amount: HOSTING_TIER_PRICE_CENTS[tier],
+              recurring: { interval: "month" },
+            },
+          },
+        ],
+        proration_behavior: "create_prorations",
+      });
+    } catch (error) {
+      console.error("[billing] change hosting tier failed", error);
+      return fail("Couldn't change your plan. Try again.");
+    }
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("business_billing").update({ hosting_tier: tier }).eq("business_id", ctx.business.id);
+  if (error) return dbError("change hosting tier", error);
+
+  revalidatePath("/billing");
+  return { ok: true };
 }
 
 export async function createBillingPortalSession(): Promise<PortalResult> {
@@ -144,11 +207,30 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
   try {
     const stripe = getStripe();
     if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: "express",
-        email: ctx.business.email || undefined,
-        business_profile: { name: ctx.business.name },
-      });
+      // Accounts v1's `type: "express"` is no longer accepted on this platform
+      // (it defaulted to the platform as losses collector, which Stripe now
+      // rejects). Accounts v2 replaces `type` with explicit `dashboard` +
+      // `defaults.responsibilities`; Express Dashboard + Stripe as losses
+      // collector ("Managed Risk") is still in preview, hence the pinned
+      // Stripe-Version override on just this call. See
+      // https://docs.stripe.com/connect/risk-management/connected-accounts-with-managed-risk
+      const account = await stripe.v2.core.accounts.create(
+        {
+          contact_email: ctx.business.email || undefined,
+          display_name: ctx.business.name,
+          dashboard: "express",
+          identity: { country: ctx.business.address.country.toLowerCase() },
+          configuration: {
+            merchant: {
+              capabilities: { card_payments: { requested: true } },
+            },
+          },
+          defaults: {
+            responsibilities: { fees_collector: "stripe", losses_collector: "stripe" },
+          },
+        },
+        { apiVersion: "2026-10-28.preview" }
+      );
       accountId = account.id;
       const { error } = await admin
         .from("business_billing")
@@ -161,15 +243,16 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
     }
 
     const returnUrl = `${getDashboardUrl()}/billing`;
-    const accountLink = await stripe.accountLinks.create({
+    const accountLink = await stripe.v2.core.accountLinks.create({
       account: accountId,
-      type: "account_onboarding",
-      refresh_url: returnUrl,
-      return_url: returnUrl,
+      use_case: {
+        type: "account_onboarding",
+        account_onboarding: { refresh_url: returnUrl, return_url: returnUrl },
+      },
     });
     return { ok: true, url: accountLink.url };
   } catch (error) {
     console.error("[billing] Connect onboarding failed", error);
-    return { ok: false, error: "Couldn't start Stripe onboarding. Try again." };
+    return { ok: false, error: stripeErrorMessage(error, "Couldn't start Stripe onboarding. Try again.") };
   }
 }
