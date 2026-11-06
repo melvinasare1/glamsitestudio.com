@@ -1,11 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { canCustomizeEmailToggles, HOSTING_TIER_LABEL, HOSTING_TIER_PRICE_CENTS, HOSTING_TIERS } from "@glamsite/shared/billing";
+import {
+  BOOKING_ADDON_PRICE_CENTS,
+  canCustomizeEmailToggles,
+  HOSTING_TIER_LABEL,
+  HOSTING_TIER_PRICE_CENTS,
+  HOSTING_TIERS,
+} from "@glamsite/shared/billing";
 import { billingFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
 import { getDashboardUrl } from "@glamsite/shared/supabase/env";
-import { getOrCreateFirstMonthCoupon, getOrCreateHostingProduct, getStripe, stripeErrorMessage } from "@glamsite/shared/stripe";
+import {
+  getOrCreateBookingAddonProduct,
+  getOrCreateFirstMonthCoupon,
+  getOrCreateHostingProduct,
+  getStripe,
+  stripeErrorMessage,
+} from "@glamsite/shared/stripe";
 import type { EmailNotificationSettings, HostingTier } from "@glamsite/shared/types";
 import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
 
@@ -159,6 +171,96 @@ export async function changeHostingTier(tier: HostingTier): Promise<ActionResult
   if (error) return dbError("change hosting tier", error);
 
   revalidatePath("/billing");
+  return { ok: true };
+}
+
+/**
+ * Turns on the paid booking add-on (docs/follow-ups.md: booking used to be
+ * free for any owner; this is what gates it, via a second item on the
+ * existing hosting subscription). Requires an active subscription — booking
+ * (apps/dashboard/src/app/(owner)/booking/actions.ts saveBooking) refuses
+ * "glamsite" mode until business_billing.booking_addon is true.
+ */
+export async function enableBookingAddon(): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+
+  const { data: billingRow } = await ctx.supabase
+    .from("business_billing")
+    .select("*")
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (!billingRow) return fail("Launch your site first, then add booking.");
+  const billing = billingFromRow(billingRow);
+  if (billing.bookingAddon) return done();
+
+  const launched = billing.subscriptionStatus === "active" || billing.subscriptionStatus === "trialing";
+  if (!launched || !billing.stripeSubscriptionId) return fail("Launch your site first, then add booking.");
+
+  try {
+    const stripe = getStripe();
+    const product = await getOrCreateBookingAddonProduct(stripe);
+    const item = await stripe.subscriptionItems.create({
+      subscription: billing.stripeSubscriptionId,
+      price_data: {
+        currency: "usd",
+        product: product.id,
+        unit_amount: BOOKING_ADDON_PRICE_CENTS,
+        recurring: { interval: "month" },
+      },
+      proration_behavior: "create_prorations",
+    });
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("business_billing")
+      .update({ booking_addon: true, stripe_booking_addon_item_id: item.id })
+      .eq("business_id", ctx.business.id);
+    if (error) return dbError("enable booking add-on", error);
+  } catch (error) {
+    console.error("[billing] enable booking add-on failed", error);
+    return { ok: false, error: stripeErrorMessage(error, "Couldn't add booking. Try again.") };
+  }
+
+  revalidatePath("/billing");
+  revalidatePath("/booking");
+  return { ok: true };
+}
+
+/** Removes the booking add-on's subscription item; saveBooking already moves booking_mode off "glamsite" itself. */
+export async function disableBookingAddon(): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+
+  const { data: billingRow } = await ctx.supabase
+    .from("business_billing")
+    .select("*")
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (!billingRow) return fail("Nothing to change.");
+  const billing = billingFromRow(billingRow);
+  if (!billing.bookingAddon) return done();
+
+  try {
+    if (billing.stripeBookingAddonItemId) {
+      await getStripe().subscriptionItems.del(billing.stripeBookingAddonItemId, {
+        proration_behavior: "create_prorations",
+      });
+    }
+  } catch (error) {
+    console.error("[billing] disable booking add-on failed", error);
+    return { ok: false, error: stripeErrorMessage(error, "Couldn't remove booking. Try again.") };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("business_billing")
+    .update({ booking_addon: false, stripe_booking_addon_item_id: null })
+    .eq("business_id", ctx.business.id);
+  if (error) return dbError("disable booking add-on", error);
+
+  revalidatePath("/billing");
+  revalidatePath("/booking");
   return { ok: true };
 }
 

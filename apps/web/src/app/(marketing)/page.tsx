@@ -296,8 +296,8 @@ export default function HomePage() {
         <div>
           <h2 className="font-didone text-4xl leading-tight md:text-5xl">Rather we did it?</h2>
           <p className="mt-5 max-w-sm leading-relaxed text-mauve">
-            Tell us about your business. We&apos;ll get in touch to book a short call, then build your site with your
-            photos, prices and team.
+            Pick a time that works for you and we&apos;ll call you then to get started, then build your site with
+            your photos, prices and team.
           </p>
         </div>
         <LeadForm />

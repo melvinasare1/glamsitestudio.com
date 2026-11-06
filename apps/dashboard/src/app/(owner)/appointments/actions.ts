@@ -19,6 +19,7 @@ import {
 } from "@glamsite/shared/email";
 import { formatAddress, formatMoney } from "@glamsite/shared/format";
 import { appointmentFromRow } from "@glamsite/shared/mappers";
+import { refundConnectPayment, getStripe, stripeErrorMessage } from "@glamsite/shared/stripe";
 import { getWebUrl } from "@glamsite/shared/supabase/env";
 import type { AppointmentStatus, Business } from "@glamsite/shared/types";
 import { dbError, fail, ownerContext, type ActionResult, type ServerClient } from "@/lib/business";
@@ -254,12 +255,16 @@ export async function markDepositPaid(id: string): Promise<ActionResult> {
 }
 
 /**
- * Owner notes that they refunded a client (done directly in Stripe or the
- * Connect dashboard — this doesn't call Stripe itself). Lets the Finance
- * page's totals reflect what actually went back out. Capped at what the
- * client paid, so refunds can't inflate a business's reported losses.
+ * Refund a client's deposit/payment, full or partial, capped at what they
+ * paid. If the payment went through Stripe Connect (online booking), this
+ * actually calls Stripe — pulling the amount back from the salon's balance
+ * and giving back our platform fee (refundConnectPayment) — so the owner
+ * doesn't also have to do it by hand in the Stripe dashboard. If the
+ * deposit was collected in person (cash, card machine) there's no payment
+ * intent to refund through Stripe; this just records that the owner
+ * refunded it themselves, same as before.
  */
-export async function recordRefund(id: string, refundCents: number): Promise<ActionResult> {
+export async function refundDeposit(id: string, refundCents: number): Promise<ActionResult> {
   const ctx = await ownerContext();
   if (!ctx.ok) return ctx;
   const { supabase, business } = ctx;
@@ -267,7 +272,7 @@ export async function recordRefund(id: string, refundCents: number): Promise<Act
 
   const { data: current, error: readError } = await supabase
     .from("appointments")
-    .select("deposit_cents, deposit_status")
+    .select("deposit_cents, deposit_status, stripe_payment_intent_id")
     .eq("id", id)
     .eq("business_id", business.id)
     .maybeSingle();
@@ -278,13 +283,45 @@ export async function recordRefund(id: string, refundCents: number): Promise<Act
   const amount = Math.round(refundCents);
   if (amount > (current.deposit_cents as number)) return fail("That's more than the client paid.");
 
+  const paymentIntentId = current.stripe_payment_intent_id as string | null;
+  if (paymentIntentId) {
+    try {
+      await refundConnectPayment(getStripe(), paymentIntentId, amount);
+    } catch (error) {
+      return fail(stripeErrorMessage(error, "Couldn't refund through Stripe. Please try again."));
+    }
+  }
+
   const { error } = await supabase
     .from("appointments")
     .update({ deposit_status: "refunded", refund_cents: amount, refunded_at: new Date().toISOString() })
     .eq("id", id)
     .eq("business_id", business.id)
     .eq("deposit_status", "paid");
+  // The Stripe refund above already went through; a failure here just means
+  // our own record of it is stale, which doesn't need undoing the refund.
   if (error) return dbError("record refund", error);
+  return done();
+}
+
+/**
+ * Owner keeps a paid deposit instead of refunding it — a no-show or a
+ * cancellation too late to qualify for a refund, per the business's own
+ * cancellation policy (shown to clients on the booking page). Doesn't touch
+ * Stripe: forfeiting just means not refunding, there's nothing to call.
+ */
+export async function forfeitDeposit(id: string): Promise<ActionResult> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return ctx;
+  const { supabase, business } = ctx;
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({ deposit_status: "forfeited" })
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .eq("deposit_status", "paid");
+  if (error) return dbError("forfeit deposit", error);
   return done();
 }
 

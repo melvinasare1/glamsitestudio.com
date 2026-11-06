@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AUTH_INPUT_CLASS, AuthFrame } from "@/components/auth-frame";
+import { PasswordInput } from "@/components/password-input";
 import { createClient } from "@glamsite/shared/supabase/client";
-import { getDashboardUrl } from "@glamsite/shared/supabase/env";
+import { requestPasswordReset } from "./actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,12 +59,9 @@ export default function LoginPage() {
 
     setResetting(true);
     try {
-      const supabase = createClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${getDashboardUrl()}/auth/confirm?next=${encodeURIComponent("/auth/reset-password")}`,
-      });
-      if (resetError) {
-        setError(resetError.message);
+      const result = await requestPasswordReset(trimmed);
+      if (!result.ok) {
+        setError(result.error);
         return;
       }
       setNotice("Check your inbox for a link to choose a new password.");
@@ -100,13 +98,7 @@ export default function LoginPage() {
         <div>
           <label className="block">
             <span className="text-sm font-medium">Password</span>
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className={AUTH_INPUT_CLASS}
-            />
+            <PasswordInput name="password" required autoComplete="current-password" />
           </label>
           <button
             type="button"

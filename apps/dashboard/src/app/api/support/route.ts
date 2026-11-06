@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { escapeHtml, sendEmail } from "@glamsite/shared/email";
+import { tooManyRequests, withinRateLimit } from "@glamsite/shared/rate-limit";
 import { getDashboardSession } from "@/lib/business";
-import {
-  escapeHtml,
-  isSupportSubject,
-  supportSubjectLabel,
-} from "@/lib/support";
+import { isSupportSubject, supportSubjectLabel } from "@/lib/support";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_NAME = 120;
@@ -19,11 +16,14 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
     }
+    // Keyed by the signed-in user, not IP: this is authenticated, so an IP
+    // key would let one office network's owners rate-limit each other.
+    if (!(await withinRateLimit(`support:${session.user.id}`, 60, 5))) {
+      return tooManyRequests("Too many support messages. Please wait a moment and try again.");
+    }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL;
     const inboxEmail = process.env.SUPPORT_INBOX_EMAIL;
-    if (!apiKey || !fromEmail || !inboxEmail) {
+    if (!inboxEmail) {
       return NextResponse.json(
         { error: "Support email isn't configured yet. Try again later." },
         { status: 503 }
@@ -89,17 +89,28 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
-      from: fromEmail,
+    const text = [
+      `Subject: ${subjectLabel}`,
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Phone: ${phone}`,
+      "",
+      `Business: ${businessName}`,
+      `Site: ${slug}`,
+      `Business ID: ${businessId}`,
+      "",
+      message,
+    ].join("\n");
+
+    const sent = await sendEmail({
       to: inboxEmail,
       replyTo: email,
       subject: `[Support] ${subjectLabel}: ${businessName}`,
       html,
+      text,
     });
 
-    if (error) {
-      console.error("Failed to send support ticket", error);
+    if (!sent) {
       return NextResponse.json(
         { error: "Couldn't send your ticket. Try again in a moment." },
         { status: 502 }

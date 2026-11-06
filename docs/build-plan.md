@@ -94,7 +94,9 @@ and payment is required for exactly one thing — launching the site:
 - [x] Billing page opens the Stripe Customer Portal
 - [ ] Upgrading hosting tier or adding done-for-you design after launch —
       moved here from sign-up, not yet built (see `docs/follow-ups.md`)
-- [ ] Done-for-you buyers land on an intake form and launch-call link
+- [x] Done-for-you buyers pick a time for us to call them, instead of
+      filling in an intake form (`apps/web/src/components/marketing/LeadForm.tsx`,
+      `packages/shared/src/call-slots.ts`)
 - [ ] Gate: 10 paying sites
 
 ## Stage 4 · Self-serve domains and more templates
@@ -166,6 +168,7 @@ rewritten onto this repo's own salon tables. Ternarie itself is untouched
 
 - [ ] Reminder email 24 hours before (scheduled job); SMS or WhatsApp later
 - [ ] Clients move their own appointment from the private link
-- [ ] Booking unlocked by the booking add-on on the hosting subscription
-      (needs stage 3 billing); owners who keep their own tool paste its link
+- [x] Booking unlocked by the booking add-on ($10/month) on the hosting
+      subscription, enforced server-side in `saveBooking`; owners who keep
+      their own tool paste its link for free, same as always
 - [ ] Pilot with 3 site customers

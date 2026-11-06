@@ -30,6 +30,29 @@ export function stripeErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Refund a booking deposit/payment collected via Connect (destination
+ * charge: payment_intent_data.transfer_data in the Checkout session —
+ * apps/web/src/lib/booking.ts). `reverse_transfer` pulls the transferred
+ * amount back out of the salon's connected account instead of leaving the
+ * platform to eat the loss; `refund_application_fee` gives back our cut of
+ * whatever's refunded. Both default to false on Stripe's API, so a plain
+ * `refunds.create` here would silently refund the client while the salon
+ * keeps the money and we keep our fee.
+ */
+export async function refundConnectPayment(
+  stripe: Stripe,
+  paymentIntentId: string,
+  amountCents: number
+): Promise<Stripe.Refund> {
+  return stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    amount: amountCents,
+    reverse_transfer: true,
+    refund_application_fee: true,
+  });
+}
+
 const HOSTING_PRODUCT_ID = "glamsite-hosting";
 
 /**
@@ -42,6 +65,21 @@ export async function getOrCreateHostingProduct(stripe: Stripe): Promise<Stripe.
     return await stripe.products.retrieve(HOSTING_PRODUCT_ID);
   } catch {
     return await stripe.products.create({ id: HOSTING_PRODUCT_ID, name: "Glam Site Studios hosting" });
+  }
+}
+
+const BOOKING_ADDON_PRODUCT_ID = "glamsite-booking-addon";
+
+/**
+ * A single persistent Stripe Product for the booking add-on, same reason as
+ * getOrCreateHostingProduct: subscription item create/update needs a real
+ * product id, not Checkout's inline product_data.
+ */
+export async function getOrCreateBookingAddonProduct(stripe: Stripe): Promise<Stripe.Product> {
+  try {
+    return await stripe.products.retrieve(BOOKING_ADDON_PRODUCT_ID);
+  } catch {
+    return await stripe.products.create({ id: BOOKING_ADDON_PRODUCT_ID, name: "Glam Site Studios booking add-on" });
   }
 }
 

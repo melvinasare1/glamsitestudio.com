@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AUTH_INPUT_CLASS, AuthFrame } from "@/components/auth-frame";
+import { AuthFrame } from "@/components/auth-frame";
+import { PasswordInput } from "@/components/password-input";
 import { createClient } from "@glamsite/shared/supabase/client";
 
 const EXPIRED_LINK =
@@ -149,25 +150,11 @@ export default function ResetPasswordPage() {
       >
         <label className="block">
           <span className="text-sm font-medium">New password</span>
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={6}
-            autoComplete="new-password"
-            className={AUTH_INPUT_CLASS}
-          />
+          <PasswordInput name="password" required minLength={6} autoComplete="new-password" />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Confirm password</span>
-          <input
-            name="confirm"
-            type="password"
-            required
-            minLength={6}
-            autoComplete="new-password"
-            className={AUTH_INPUT_CLASS}
-          />
+          <PasswordInput name="confirm" required minLength={6} autoComplete="new-password" />
         </label>
 
         {error ? <p className="text-sm text-delta-down">{error}</p> : null}

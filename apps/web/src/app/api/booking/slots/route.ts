@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requestIp, tooManyRequests, withinRateLimit } from "@glamsite/shared/rate-limit";
 import { getSlots, isUuid, loadBookingSite } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/booking/slots?site=bella&service=…&staff=…|any&from=YYYY-MM-DD&to=YYYY-MM-DD */
 export async function GET(req: NextRequest) {
+  const ip = requestIp(req.headers);
+  // Higher budget than the write endpoints: legitimately hit once per date
+  // page the client clicks through while choosing a time.
+  if (!(await withinRateLimit(`booking:slots:${ip}`, 60, 60))) {
+    return tooManyRequests();
+  }
+
   const params = req.nextUrl.searchParams;
   const slug = params.get("site")?.trim() ?? "";
   const serviceId = params.get("service")?.trim() ?? "";

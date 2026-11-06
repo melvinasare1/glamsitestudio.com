@@ -1,6 +1,8 @@
-import { EMAIL_QUOTA_BY_TIER, HOSTING_TIER_LABEL, hasCampaignsAccess } from "@glamsite/shared/billing";
+import { BOOKING_ADDON_PRICE_CENTS, EMAIL_QUOTA_BY_TIER, HOSTING_TIER_LABEL, hasCampaignsAccess } from "@glamsite/shared/billing";
+import { formatMoney } from "@glamsite/shared/format";
 import { PageBody, PageHeader, Panel } from "@/components/page";
 import { getDashboardSession } from "@/lib/business";
+import { BookingAddonButton } from "./booking-addon-button";
 import { ConnectStripeButton } from "./connect-stripe-button";
 import { EmailCampaignsPanel } from "./email-campaigns-panel";
 import { EmailNotificationsForm } from "./email-notifications-form";
@@ -75,6 +77,22 @@ export default async function BillingPage() {
               <LaunchButton />
             </div>
           ) : null}
+        </Panel>
+
+        <Panel
+          title="Booking add-on"
+          description={`${formatMoney(BOOKING_ADDON_PRICE_CENTS, "usd")}/month on top of hosting. Required for Glam Site booking on your site.`}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              {billing?.bookingAddon
+                ? "On. Clients can book services, staff and times on your site."
+                : launched
+                  ? "Off. Turn it on here, then choose Glam Site booking on the Booking page."
+                  : "Launch your site first, then add this from here."}
+            </p>
+            <BookingAddonButton active={billing?.bookingAddon ?? false} launched={launched} />
+          </div>
         </Panel>
 
         <Panel title="Get paid for bookings">

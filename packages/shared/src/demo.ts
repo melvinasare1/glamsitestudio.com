@@ -16,6 +16,7 @@ function demoBusiness(templateId: string, name: string, content: SiteContent): B
     slug: "demo",
     templateId,
     status: "live",
+    previewToken: "",
     customDomain: null,
     customDomainVerified: false,
     email: "hello@example.com",

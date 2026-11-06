@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { Business } from "@glamsite/shared/types";
 import { Field, Panel } from "@/components/page";
@@ -18,7 +19,7 @@ const OPTIONS: { value: Mode; title: string; body: string }[] = [
   { value: "none", title: "No online booking", body: "Book buttons take clients to your contact details and message form." },
 ];
 
-export function BookingForm({ business }: { business: Business }) {
+export function BookingForm({ business, bookingAddon }: { business: Business; bookingAddon: boolean }) {
   const { pending, run } = useAction();
   const [mode, setMode] = useState<Mode>(business.bookingMode);
   const [url, setUrl] = useState(business.bookingUrl);
@@ -33,25 +34,45 @@ export function BookingForm({ business }: { business: Business }) {
         }}
       >
         <div role="radiogroup" className="grid gap-3">
-          {OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={mode === option.value}
-              onClick={() => setMode(option.value)}
-              className={cn(
-                "rounded-xl border p-4 text-left transition",
-                mode === option.value ? "border-brand bg-brand-soft/50 ring-1 ring-brand" : "border-black/8 hover:border-black/20"
-              )}
-            >
-              <span className="flex items-center gap-2 font-medium">
-                {option.title}
-                {business.bookingMode === option.value ? <Badge variant="outline">Current</Badge> : null}
-              </span>
-              <span className="mt-1 block text-sm text-muted-foreground">{option.body}</span>
-            </button>
-          ))}
+          {OPTIONS.map((option) => {
+            const locked = option.value === "glamsite" && !bookingAddon;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={mode === option.value}
+                disabled={locked}
+                onClick={() => !locked && setMode(option.value)}
+                className={cn(
+                  "rounded-xl border p-4 text-left transition",
+                  locked
+                    ? "cursor-not-allowed border-black/8 opacity-60"
+                    : mode === option.value
+                      ? "border-brand bg-brand-soft/50 ring-1 ring-brand"
+                      : "border-black/8 hover:border-black/20"
+                )}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  {option.title}
+                  {business.bookingMode === option.value ? <Badge variant="outline">Current</Badge> : null}
+                  {locked ? <Badge variant="outline">Add-on</Badge> : null}
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {option.body}
+                  {locked ? (
+                    <>
+                      {" "}
+                      <Link href="/billing" className="font-medium text-brand underline-offset-4 hover:underline">
+                        Add it from Billing
+                      </Link>
+                      .
+                    </>
+                  ) : null}
+                </span>
+              </button>
+            );
+          })}
         </div>
         {mode === "link" ? (
           <Field id="booking-url" label="Booking page link" description="Copy the link clients use to book with you.">
