@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { AuthFrame } from "@/components/auth-frame";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { createClient } from "@glamsite/shared/supabase/server";
+import { getWebUrl } from "@glamsite/shared/supabase/env";
 import { isAdminEmail } from "@/lib/admin";
 import { getDashboardSession } from "@/lib/business";
 
@@ -37,8 +39,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .gte("starts_at", new Date().toISOString());
 
   return (
-    <DashboardShell user={session.user} business={session.business} pendingCount={count ?? 0}>
+    <DashboardShell user={session.user} business={session.business} pendingCount={count ?? 0} webUrl={getWebUrl()}>
       {children}
+      {/* Live chat support. Tidio for now — revisit once volume justifies a cheaper provider
+          (docs/follow-ups.md). Only loaded once an owner is signed in with a site, not on
+          login/signup/reset-password. */}
+      <Script src="https://code.tidio.co/u2xn0hjro3vpvokct80evnxhsmqt8qib.js" strategy="afterInteractive" async />
     </DashboardShell>
   );
 }

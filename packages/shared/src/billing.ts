@@ -2,7 +2,7 @@
  * Pure hosting-tier / email-quota gating rules. No Supabase dependency —
  * callers (app code, UI copy) read these instead of hardcoding numbers.
  */
-import type { EmailNotificationSettings, EmailType, HostingTier } from "./types";
+import type { BusinessBilling, EmailNotificationSettings, EmailType, HostingTier } from "./types";
 
 export const EMAIL_QUOTA_BY_TIER: Record<HostingTier, number> = {
   basic: 100,
@@ -27,6 +27,9 @@ export const HOSTING_TIERS: readonly HostingTier[] = ["basic", "popular", "premi
 
 /** One-off done-for-you setup fee, in cents. */
 export const DONE_FOR_YOU_PRICE_CENTS = 9900;
+
+/** Glam Site booking add-on, in cents per month, on top of hosting. */
+export const BOOKING_ADDON_PRICE_CENTS = 1000;
 
 /**
  * Our cut of a salon's booking payment, via Stripe Connect's
@@ -72,4 +75,23 @@ export function isEmailTypeEnabled(
 /** Quota applies equally to all email types — no exemptions. */
 export function canSendWithinQuota(usageCount: number, quota: number): boolean {
   return usageCount < quota;
+}
+
+/** Flat lifetime rate for the "Earn" business-to-business referral program. */
+export const PLATFORM_REFERRAL_COMMISSION_RATE = 0.15;
+
+/**
+ * What a referred business pays us for hosting in a month, in cents --
+ * the real source of truth for an Earn referral's commission, rather than a
+ * manually-entered figure. Only counts while their subscription is actually
+ * running; cancelled/past-due months earn nothing.
+ */
+export function referredBusinessMonthlySpendCents(billing: BusinessBilling): number {
+  if (billing.subscriptionStatus !== "active" && billing.subscriptionStatus !== "trialing") return 0;
+  return HOSTING_TIER_PRICE_CENTS[billing.hostingTier] + (billing.bookingAddon ? BOOKING_ADDON_PRICE_CENTS : 0);
+}
+
+/** Commission on a given gross amount, in cents. */
+export function platformReferralCommissionCents(grossCents: number): number {
+  return Math.round(grossCents * PLATFORM_REFERRAL_COMMISSION_RATE);
 }

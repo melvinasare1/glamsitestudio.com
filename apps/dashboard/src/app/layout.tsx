@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
-import Script from "next/script";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Analytics } from "@vercel/analytics/next";
@@ -42,8 +41,6 @@ export default function RootLayout({
       <body className="font-body">
         <TooltipProvider>{children}</TooltipProvider>
         <Analytics />
-        {/* Live chat support. Tidio for now — revisit once volume justifies a cheaper provider (docs/follow-ups.md). */}
-        <Script src="https://code.tidio.co/u2xn0hjro3vpvokct80evnxhsmqt8qib.js" strategy="afterInteractive" async />
       </body>
     </html>
   );

@@ -91,6 +91,28 @@ export function signInLinkEmail(href: string): Rendered {
   };
 }
 
+/**
+ * Sent instead of relying on Supabase Auth's own password-recovery email
+ * (which needs SMTP configured by hand in the Supabase dashboard and is easy
+ * to leave misconfigured — see docs/infrastructure.md). We generate the
+ * recovery link ourselves (admin.auth.admin.generateLink) and send it
+ * through the same Resend path as every other email, same as sign-up's
+ * signInLinkEmail.
+ */
+export function passwordResetEmail(href: string): Rendered {
+  return {
+    subject: "Reset your Glam Site Studios password",
+    html: layout(
+      "Reset your password",
+      "Use the button below to choose a new password. The link works once and expires soon.",
+      "",
+      { label: "Choose a new password", href },
+      "If you didn't request this, you can ignore this email — your password won't change."
+    ),
+    text: `Reset your Glam Site Studios password\n\n${href}\n\nIf you didn't request this, you can ignore this email.`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Booking templates
 // ---------------------------------------------------------------------------
@@ -253,5 +275,72 @@ export function ownerClientCancelledEmail(d: BookingEmailDetails, dashboardUrl: 
       href: dashboardUrl,
     }),
     text: `A client cancelled\n\n${table.text}\n\n${dashboardUrl}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Platform referral ("Earn") templates
+// ---------------------------------------------------------------------------
+
+export type PlatformReferralDetails = {
+  referrerBusinessName: string;
+  referredBusinessName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+};
+
+/** To our support inbox, when an owner submits a new "Earn" referral. */
+export function platformReferralStaffNotifyEmail(d: PlatformReferralDetails): Rendered {
+  const table = rows([
+    ["Referred by", d.referrerBusinessName],
+    ["Business", d.referredBusinessName],
+    ["Contact", d.contactName],
+    ["Email", d.contactEmail],
+    ["Phone", d.contactPhone],
+  ]);
+  return {
+    subject: `Earn referral: ${d.referredBusinessName}`,
+    html: layout(
+      "New Earn referral",
+      `<strong>${escapeHtml(d.referrerBusinessName)}</strong> referred a business. Reach out, then update its status in the admin.`,
+      table.html
+    ),
+    text: `New Earn referral\n\n${table.text}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Done-for-you lead templates
+// ---------------------------------------------------------------------------
+
+export type DoneForYouCallDetails = {
+  name: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  message: string;
+  /** Already formatted in UK time, e.g. "Tuesday 4 November, 2:30pm". */
+  when: string;
+};
+
+/** To our support inbox, when someone picks a done-for-you launch call time. */
+export function doneForYouCallEmail(d: DoneForYouCallDetails): Rendered {
+  const table = rows([
+    ["When", d.when],
+    ["Name", d.name],
+    ["Business", d.businessName],
+    ["Email", d.email],
+    ["Phone", d.phone],
+    ["Notes", d.message],
+  ]);
+  return {
+    subject: `Done-for-you call booked: ${d.businessName}, ${d.when}`,
+    html: layout(
+      "Done-for-you call booked",
+      "Someone picked a time for their launch call. Add it to the calendar and call them then.",
+      table.html
+    ),
+    text: `Done-for-you call booked\n\n${table.text}`,
   };
 }

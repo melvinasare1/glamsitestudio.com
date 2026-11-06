@@ -11,15 +11,17 @@ export function DashboardShell({
   user,
   business,
   pendingCount,
+  webUrl,
   children,
 }: {
   user: OwnerUser;
   business: Business;
   pendingCount: number;
+  webUrl: string;
   children: React.ReactNode;
 }) {
   return (
-    <BusinessProvider user={user} business={business} pendingCount={pendingCount}>
+    <BusinessProvider user={user} business={business} pendingCount={pendingCount} webUrl={webUrl}>
       <SidebarProvider
         className="flex-col"
         style={{ "--sidebar-width": "15rem", "--header-height": "4rem" } as React.CSSProperties}
