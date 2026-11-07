@@ -267,6 +267,14 @@ export type SiteData = {
 export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show" | "late";
 export type DepositStatus = "none" | "pending" | "paid" | "refunded" | "forfeited";
 
+/** One entry in an appointment's deposit history: a partial/full refund, or a forfeit. */
+export type DepositEvent = {
+  id: string;
+  kind: "refunded" | "forfeited";
+  amountCents: number;
+  createdAt: string;
+};
+
 export type Appointment = {
   id: string;
   businessId: string;
@@ -296,9 +304,12 @@ export type Appointment = {
   discountCode: string | null;
   /** How much was taken off because of discountCode. 0 when discountCode is null. */
   discountCents: number;
-  /** What was actually given back to the client. Recorded by the owner, not fetched from Stripe. 0 means no refund. */
+  /** Total given back across every refund so far (there can be several partial ones). 0 means no refund. */
   refundCents: number;
+  /** When the most recent refund happened. */
   refundedAt: string | null;
+  /** Every refund/forfeit on this appointment's deposit, oldest first. Embedded when the query selects `appointment_deposit_events(...)`. */
+  depositEvents: DepositEvent[];
   /** Embedded when the query selects `clients(name, email, phone)`. */
   client: { name: string; email: string; phone: string } | null;
   /** Embedded when the query selects `staff(name)`. */

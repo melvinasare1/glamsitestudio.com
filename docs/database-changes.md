@@ -35,6 +35,39 @@ session has already applied the change.
 
 ---
 
+## 7 Nov 2026 · `20261111000000_appointment_deposit_events`
+
+**What:** adds `appointment_deposit_events`, an append-only log of every
+refund/forfeit on an appointment's deposit (`kind`: `refunded` or
+`forfeited`, `amount_cents`, `created_at`), scoped by `business_id` with the
+same owner-RLS pattern as `appointments`. Needed because
+`appointments.refund_cents`/`refunded_at` only ever held the latest refund,
+so a deposit could never be refunded in two parts and forfeits left no
+record at all. Nothing existing is dropped or rewritten.
+
+**File:** `supabase/migrations/20261111000000_appointment_deposit_events.sql`.
+**Undo:** `supabase/rollbacks/20261111000000_appointment_deposit_events.down.sql`.
+Drops the table; turn off or revert the refund/forfeit UI and actions first,
+since they insert into and read from it.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | Checked via `list_migrations`: not applied | Not checked/applied in this session |
+| Applied | Same session, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261111000000_appointment_deposit_events` | — |
+| Verified | `select count(*) from appointment_deposit_events` succeeds (0 rows) | — |
+| Security advisor | Clean for the new table (only the same pre-existing, unrelated findings as above) | — |
+
+**Why this happened:** Phase 3 (refunds and no-show rules) was mostly built
+already, but owners could only ever record one refund per appointment and
+had no visibility into deposit history; marking a no-show also didn't
+prompt the owner to keep the deposit.
+
+**Still open:** production needs this migration before the feature ships
+live there.
+
+---
+
 ## 7 Nov 2026 · `20261109000000_platform_referrals`
 
 **What:** adds three new tables for the "Earn" business-to-business referral

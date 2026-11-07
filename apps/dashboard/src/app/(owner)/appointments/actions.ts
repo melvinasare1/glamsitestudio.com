@@ -255,14 +255,17 @@ export async function markDepositPaid(id: string): Promise<ActionResult> {
 }
 
 /**
- * Refund a client's deposit/payment, full or partial, capped at what they
- * paid. If the payment went through Stripe Connect (online booking), this
- * actually calls Stripe — pulling the amount back from the salon's balance
- * and giving back our platform fee (refundConnectPayment) — so the owner
- * doesn't also have to do it by hand in the Stripe dashboard. If the
- * deposit was collected in person (cash, card machine) there's no payment
- * intent to refund through Stripe; this just records that the owner
- * refunded it themselves, same as before.
+ * Refund a client's deposit/payment, full or partial, capped at what's left
+ * unrefunded. Can be called more than once — each call tops up
+ * appointments.refund_cents and logs its own row in
+ * appointment_deposit_events, so two partial refunds are both kept on
+ * record instead of the second overwriting the first. If the payment went
+ * through Stripe Connect (online booking), this actually calls Stripe —
+ * pulling the amount back from the salon's balance and giving back our
+ * platform fee (refundConnectPayment) — so the owner doesn't also have to
+ * do it by hand in the Stripe dashboard. If the deposit was collected in
+ * person (cash, card machine) there's no payment intent to refund through
+ * Stripe; this just records that the owner refunded it themselves.
  */
 export async function refundDeposit(id: string, refundCents: number): Promise<ActionResult> {
   const ctx = await ownerContext();
@@ -272,7 +275,7 @@ export async function refundDeposit(id: string, refundCents: number): Promise<Ac
 
   const { data: current, error: readError } = await supabase
     .from("appointments")
-    .select("deposit_cents, deposit_status, stripe_payment_intent_id")
+    .select("deposit_cents, deposit_status, refund_cents, stripe_payment_intent_id")
     .eq("id", id)
     .eq("business_id", business.id)
     .maybeSingle();
@@ -281,7 +284,8 @@ export async function refundDeposit(id: string, refundCents: number): Promise<Ac
   if (current.deposit_status !== "paid") return fail("Only a paid deposit can be refunded.");
 
   const amount = Math.round(refundCents);
-  if (amount > (current.deposit_cents as number)) return fail("That's more than the client paid.");
+  const remaining = (current.deposit_cents as number) - (current.refund_cents as number);
+  if (amount > remaining) return fail("That's more than what's left to refund.");
 
   const paymentIntentId = current.stripe_payment_intent_id as string | null;
   if (paymentIntentId) {
@@ -292,28 +296,51 @@ export async function refundDeposit(id: string, refundCents: number): Promise<Ac
     }
   }
 
+  const newTotal = (current.refund_cents as number) + amount;
   const { error } = await supabase
     .from("appointments")
-    .update({ deposit_status: "refunded", refund_cents: amount, refunded_at: new Date().toISOString() })
+    .update({
+      deposit_status: newTotal >= (current.deposit_cents as number) ? "refunded" : "paid",
+      refund_cents: newTotal,
+      refunded_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .eq("business_id", business.id)
     .eq("deposit_status", "paid");
   // The Stripe refund above already went through; a failure here just means
   // our own record of it is stale, which doesn't need undoing the refund.
   if (error) return dbError("record refund", error);
+
+  const { error: eventError } = await supabase
+    .from("appointment_deposit_events")
+    .insert({ appointment_id: id, business_id: business.id, kind: "refunded", amount_cents: amount });
+  if (eventError) console.error("[appointments] refund history insert failed", eventError.message);
+
   return done();
 }
 
 /**
- * Owner keeps a paid deposit instead of refunding it — a no-show or a
- * cancellation too late to qualify for a refund, per the business's own
- * cancellation policy (shown to clients on the booking page). Doesn't touch
- * Stripe: forfeiting just means not refunding, there's nothing to call.
+ * Owner keeps whatever's left of a paid deposit instead of refunding it —
+ * a no-show or a cancellation too late to qualify for a refund, per the
+ * business's own cancellation policy (shown to clients on the booking
+ * page). Doesn't touch Stripe: forfeiting just means not refunding, there's
+ * nothing to call.
  */
 export async function forfeitDeposit(id: string): Promise<ActionResult> {
   const ctx = await ownerContext();
   if (!ctx.ok) return ctx;
   const { supabase, business } = ctx;
+
+  const { data: current, error: readError } = await supabase
+    .from("appointments")
+    .select("deposit_cents, deposit_status, refund_cents")
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .maybeSingle();
+  if (readError) return dbError("read appointment", readError);
+  if (!current) return fail("That appointment no longer exists.");
+  if (current.deposit_status !== "paid") return fail("Only a paid deposit can be forfeited.");
+  const remaining = (current.deposit_cents as number) - (current.refund_cents as number);
 
   const { error } = await supabase
     .from("appointments")
@@ -322,6 +349,12 @@ export async function forfeitDeposit(id: string): Promise<ActionResult> {
     .eq("business_id", business.id)
     .eq("deposit_status", "paid");
   if (error) return dbError("forfeit deposit", error);
+
+  const { error: eventError } = await supabase
+    .from("appointment_deposit_events")
+    .insert({ appointment_id: id, business_id: business.id, kind: "forfeited", amount_cents: remaining });
+  if (eventError) console.error("[appointments] forfeit history insert failed", eventError.message);
+
   return done();
 }
 

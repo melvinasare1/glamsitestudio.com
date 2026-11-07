@@ -149,12 +149,21 @@ rewritten onto this repo's own salon tables. Ternarie itself is untouched
       redemption limit) a client can enter at checkout; applied to the
       amount charged on the salon's connected account, 3 Nov 2026
 
-### Phase 3 · Refunds and no-show rules
+### Phase 3 · Refunds and no-show rules (done, 7 Nov 2026)
 
-- [ ] Client cancels before the cut-off: deposit refunded automatically
-- [ ] Late cancel or no-show: deposit kept (`forfeited`), as the policy says
-- [ ] Owner refunds from the appointment panel: full or partial
-- [ ] Refund and payment history per appointment
+- [x] Client cancels before the cut-off: deposit refunded automatically
+      (`apps/web/src/lib/booking.ts`'s `cancelByToken`)
+- [x] Late cancel or no-show: deposit kept (`forfeited`), as the policy says
+      — owner is prompted to keep the deposit the moment they mark a
+      no-show (`changeStatus` in `appointments-board.tsx`), or can forfeit
+      by hand any time a deposit is still `paid`
+- [x] Owner refunds from the appointment panel: full or partial, and more
+      than once — each refund tops up what's left rather than blocking
+      further refunds
+- [x] Refund and payment history per appointment: `appointment_deposit_events`
+      (`supabase/migrations/20261111000000_appointment_deposit_events.sql`),
+      an append-only log of every refund/forfeit, shown on the appointment
+      panel
 
 ### Phase 4 · Waitlist
 

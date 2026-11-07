@@ -23,14 +23,18 @@ export default async function AppointmentsPage({ searchParams }: Props) {
   const [appointments, pending, staff, services] = await Promise.all([
     supabase
       .from("appointments")
-      .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
+      .select(
+        "*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name), appointment_deposit_events(id, kind, amount_cents, created_at)"
+      )
       .eq("business_id", business.id)
       .gte("starts_at", weekStart)
       .lt("starts_at", weekEnd)
       .order("starts_at"),
     supabase
       .from("appointments")
-      .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
+      .select(
+        "*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name), appointment_deposit_events(id, kind, amount_cents, created_at)"
+      )
       .eq("business_id", business.id)
       .eq("status", "pending")
       .gte("starts_at", new Date().toISOString())

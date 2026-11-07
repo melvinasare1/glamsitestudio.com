@@ -13,6 +13,7 @@ import type {
   BusinessStatus,
   Client,
   ClientReferral,
+  DepositEvent,
   DepositStatus,
   DiscountCode,
   DiscountKind,
@@ -298,6 +299,20 @@ function embedded(value: unknown): Row | null {
   return value && typeof value === "object" ? (value as Row) : null;
 }
 
+/** For a to-many embed, e.g. `appointment_deposit_events(...)`. */
+function embeddedArray(value: unknown): Row[] {
+  return Array.isArray(value) ? (value as Row[]) : [];
+}
+
+function depositEventFromRow(row: Row): DepositEvent {
+  return {
+    id: str(row.id),
+    kind: row.kind === "forfeited" ? "forfeited" : "refunded",
+    amountCents: int(row.amount_cents),
+    createdAt: str(row.created_at),
+  };
+}
+
 /** `clients(name, email, phone)` and `staff(name)` may be embedded. */
 export function appointmentFromRow(row: Row): Appointment {
   const client = embedded(row.clients);
@@ -332,6 +347,7 @@ export function appointmentFromRow(row: Row): Appointment {
     discountCents: int(row.discount_cents),
     refundCents: int(row.refund_cents),
     refundedAt: strOrNull(row.refunded_at),
+    depositEvents: embeddedArray(row.appointment_deposit_events).map(depositEventFromRow),
     client: client ? { name: str(client.name), email: str(client.email), phone: str(client.phone) } : null,
     staffName: staff ? str(staff.name) : null,
   };
