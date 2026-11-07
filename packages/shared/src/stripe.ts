@@ -30,6 +30,11 @@ export function stripeErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+export function stripeObjectId(value: string | { id: string } | null | undefined): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
 /**
  * Refund a booking deposit/payment collected via Connect (destination
  * charge: payment_intent_data.transfer_data in the Checkout session —

@@ -8,6 +8,7 @@ import {
   HOSTING_TIER_PRICE_CENTS,
   HOSTING_TIERS,
 } from "@glamsite/shared/billing";
+import { confirmLaunchFromSession } from "@glamsite/shared/billing-sync";
 import { billingFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
 import { getDashboardUrl } from "@glamsite/shared/supabase/env";
@@ -101,8 +102,12 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
         },
       ],
       discounts: [{ coupon: coupon.id }],
-      success_url: `${getDashboardUrl()}/?launched=1`,
-      cancel_url: `${getDashboardUrl()}/billing`,
+      // session_id lets the Overview page confirm the subscription itself
+      // on first load (confirmLaunchIfNeeded below) instead of only
+      // trusting the webhook's timing — confirmLaunchFromSession is
+      // idempotent, so both running is fine.
+      success_url: `${getDashboardUrl()}/?launched=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getDashboardUrl()}/billing?checkout=cancelled`,
       metadata: { businessId: ctx.business.id },
       subscription_data: { metadata: { businessId: ctx.business.id } },
     });
@@ -111,6 +116,34 @@ export async function startLaunchCheckout(): Promise<PortalResult> {
   } catch (error) {
     console.error("[billing] launch checkout failed", error);
     return { ok: false, error: "Couldn't start checkout. Try again." };
+  }
+}
+
+/**
+ * Called from the Overview page right after the $1 launch redirect
+ * (?session_id=...), the same reasoning as refreshConnectStatus below: the
+ * checkout.session.completed webhook is the source of truth but can land
+ * after this page's first render, so we also check Stripe directly here.
+ * No-ops once already launched.
+ */
+export async function confirmLaunchIfNeeded(sessionId: string): Promise<void> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return;
+
+  const { data: billingRow } = await ctx.supabase
+    .from("business_billing")
+    .select("subscription_status")
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (billingRow?.subscription_status === "active" || billingRow?.subscription_status === "trialing") return;
+
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (session.metadata?.businessId !== ctx.business.id) return; // not this business's session
+    if (session.status !== "complete") return; // still processing (e.g. a delayed payment method)
+    await confirmLaunchFromSession(session);
+  } catch (error) {
+    console.error("[dashboard] confirm launch from session failed", error);
   }
 }
 

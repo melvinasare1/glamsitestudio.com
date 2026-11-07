@@ -83,7 +83,8 @@ Supabase project; **Preview** and **Development** values point at staging.
 | `RESEND_FROM_EMAIL` | — | yes | e.g. `Glam Site Studios <hello@glamsitestudio.com>` |
 | `SUPPORT_INBOX_EMAIL` | — | yes | Where support tickets go |
 | `STRIPE_SECRET_KEY` | stage 3 | stage 3 | Sensitive. Test key on Preview |
-| `STRIPE_WEBHOOK_SECRET` | stage 3 | — | Sensitive. One per environment |
+| `STRIPE_WEBHOOK_SECRET` | stage 3 | — | Sensitive. One per environment, for the "Account" endpoint's events |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | stage 5 | — | Sensitive. Separate secret for the Connect endpoint's events (`account.updated`, `payout.failed`). Optional locally if you don't run `stripe listen --forward-connect-to` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | stage 3 | stage 3 | |
 | `PLATFORM_FEE_BPS` | stage 5 | — | Optional, basis points (1% = 100), default 100. Booking Checkout + webhook only run on web |
 
@@ -115,9 +116,40 @@ removed with MoMo billing in stage 2.
   destination charge, computed by `platformFeeCents()` in
   `packages/shared/src/billing.ts` from `PLATFORM_FEE_BPS` (default 100 =
   1%) — change the rate by updating the env var, no redeploy needed.
-- Connect webhook setup: Express account events (`account.updated`) only
-  reach `/api/stripe/webhook` if "Listen to events on connected accounts"
-  is enabled for that endpoint in the Stripe Dashboard (or, for local
-  testing, `stripe listen --forward-connect-to localhost:3000/api/stripe/webhook`
-  alongside the regular `--forward-to`). Easy to miss — without it,
-  `stripe_connect_charges_enabled` never flips to true.
+- Connect webhook setup: Express account events (`account.updated`,
+  `payout.failed`) come from *connected* accounts, not the platform. In the
+  Stripe **Dashboard** (Preview/Production, a registered endpoint), that
+  needs a second, separate webhook endpoint with "Listen to events on
+  connected accounts" (`connect: true`) checked — only settable at creation,
+  so it can't be bolted onto the existing "Account" endpoint. Both can point
+  at the same URL (the route tells events apart by whether `event.account`
+  is set), but each has its own signing secret: `STRIPE_WEBHOOK_SECRET` for
+  the Account endpoint, `STRIPE_CONNECT_WEBHOOK_SECRET` for the Connect one
+  — the webhook route tries both.
+- Locally, there's no such split: `stripe listen` is one CLI session with
+  one signing secret covering both your account's events and connected
+  accounts' events (`--forward-connect-to` only changes *where* Connect
+  events are sent, not the secret that signs them). `stripe listen
+  --print-secret --api-key <test secret key>` prints that secret without
+  starting a session — stable across runs for the same API key/device, so
+  it only needs copying into `STRIPE_WEBHOOK_SECRET` once.
+  `STRIPE_CONNECT_WEBHOOK_SECRET` stays unset locally.
+  `stripe listen --forward-to localhost:3000/api/stripe/webhook --forward-connect-to localhost:3000/api/stripe/webhook`
+  forwards both kinds of events to the dev server; `stripe trigger
+  checkout.session.completed` (etc.) fires a specific event, or complete a
+  real test Checkout/Connect flow against the dev server.
+- `payout.failed`: a salon's automatic payout to their bank bounced (closed
+  account, bad details). Emails the owner (link to Billing to fix it) and
+  `SUPPORT_INBOX_EMAIL`, since the money just sits in their Stripe balance
+  until they do.
+- Production webhook endpoints (live mode, both at `https://glamsitestudio.com/api/stripe/webhook`),
+  set up 7 Nov 2026: Account endpoint `we_1UXUbTCQYXxSrNIj2Py0XpHo`
+  (`checkout.session.completed`, `customer.subscription.updated`/`.deleted`)
+  and Connect endpoint `we_1UZEqFCQYXxSrNIjodX8CBTE` (`account.updated`,
+  `payout.failed`), both signing secrets already in the `glamsitestudio.com`
+  Vercel project's production env (`STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_CONNECT_WEBHOOK_SECRET`) — env vars only take effect on a project's
+  *next* deployment, not retroactively on one already running. There's also
+  a third, unrelated live endpoint on this Stripe account
+  (`we_1UGRFWCQYXxSrNIjRq7nSr2i`, pointed at `clean-city-backend-plum.vercel.app`)
+  left alone deliberately; it predates this project and isn't ours to touch.
