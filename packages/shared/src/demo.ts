@@ -2,7 +2,7 @@
  * Demo businesses for template previews (/demo/{template}). Realistic enough
  * that a salon owner can picture their own site, never tied to a database row.
  */
-import type { SiteContent } from "./site-content";
+import { parseSiteContent, type SiteContent } from "./site-content";
 import { getTemplate } from "./templates";
 import type { Business, OpeningHours, Service, ServiceCategory, SiteData, StaffMember, Weekday } from "./types";
 
@@ -318,4 +318,27 @@ export function demoSiteData(templateId: string): SiteData {
   const id = getTemplate(templateId).id;
   const data = (DEMOS[id] ?? salonDemo)();
   return { ...data, business: { ...data.business, templateId: id } };
+}
+
+/**
+ * A template's demo content, safe to seed onto a real business's own site
+ * when they pick that template on an otherwise-untouched site (see
+ * apps/dashboard/.../website/actions.ts saveTemplate). Strips the demo's
+ * fabricated reviews and social links -- real customer testimonials and
+ * contact channels, not placeholder copy an owner is expected to replace --
+ * so nobody ends up publishing fake ones under their own business's name
+ * just because they never got around to editing that section.
+ */
+export function seedableContent(templateId: string): SiteContent {
+  const content = parseSiteContent(demoSiteData(templateId).business.content);
+  if (content.reviews) content.reviews = { ...content.reviews, items: [] };
+  if (content.contact) {
+    const contact = { ...content.contact };
+    delete contact.instagram;
+    delete contact.tiktok;
+    delete contact.facebook;
+    delete contact.whatsapp;
+    content.contact = contact;
+  }
+  return content;
 }
