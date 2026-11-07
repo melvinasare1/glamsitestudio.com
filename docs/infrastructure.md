@@ -115,9 +115,13 @@ removed with MoMo billing in stage 2.
   destination charge, computed by `platformFeeCents()` in
   `packages/shared/src/billing.ts` from `PLATFORM_FEE_BPS` (default 100 =
   1%) — change the rate by updating the env var, no redeploy needed.
-- Connect webhook setup: Express account events (`account.updated`) only
-  reach `/api/stripe/webhook` if "Listen to events on connected accounts"
-  is enabled for that endpoint in the Stripe Dashboard (or, for local
-  testing, `stripe listen --forward-connect-to localhost:3000/api/stripe/webhook`
+- Connect webhook setup: Express account events (`account.updated`,
+  `payout.failed`) only reach `/api/stripe/webhook` if "Listen to events on
+  connected accounts" is enabled for that endpoint in the Stripe Dashboard
+  (or, for local testing, `stripe listen --forward-connect-to localhost:3000/api/stripe/webhook`
   alongside the regular `--forward-to`). Easy to miss — without it,
   `stripe_connect_charges_enabled` never flips to true.
+- `payout.failed`: a salon's automatic payout to their bank bounced (closed
+  account, bad details). Emails the owner (link to Billing to fix it) and
+  `SUPPORT_INBOX_EMAIL`, since the money just sits in their Stripe balance
+  until they do.

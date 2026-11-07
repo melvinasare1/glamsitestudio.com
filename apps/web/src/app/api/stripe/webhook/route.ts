@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { ACTIVE_STATUSES, bookingRulesFromRow } from "@glamsite/shared/booking";
+import { payoutFailedEmail, payoutFailedStaffNotifyEmail, sendEmail } from "@glamsite/shared/email";
+import { formatMoney } from "@glamsite/shared/format";
 import { appointmentFromRow, businessFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
+import { getDashboardUrl } from "@glamsite/shared/supabase/env";
 import { getStripe, refundConnectPayment } from "@glamsite/shared/stripe";
 import { sendBookingConfirmationEmails } from "@/lib/booking";
 
@@ -48,6 +51,9 @@ export async function POST(request: NextRequest) {
         break;
       case "account.updated":
         await syncConnectAccount(event.data.object as Stripe.Account);
+        break;
+      case "payout.failed":
+        await notifyPayoutFailed(event.data.object as Stripe.Payout, event.account);
         break;
       default:
         break;
@@ -201,6 +207,53 @@ async function syncConnectAccount(account: Stripe.Account): Promise<void> {
     .update({ stripe_connect_charges_enabled: account.charges_enabled })
     .eq("stripe_connect_account_id", account.id);
   if (error) console.error("[stripe webhook] Connect account sync failed", error);
+}
+
+/**
+ * A connected account's automatic payout to their bank bounced (closed
+ * account, bad details, etc. -- unrelated to a Checkout charge, which fails
+ * synchronously and never reaches here). Only arrives because "Listen to
+ * events on connected accounts" is enabled (docs/infrastructure.md), so the
+ * account id comes from `event.account`, not the payout object itself.
+ * The money just sits back in the salon's Stripe balance until they fix it,
+ * so this alerts the owner (to actually get paid) and support (visibility).
+ */
+async function notifyPayoutFailed(payout: Stripe.Payout, accountId: string | undefined): Promise<void> {
+  if (!accountId) return;
+  const admin = createAdminClient();
+
+  const { data: billing } = await admin
+    .from("business_billing")
+    .select("business_id")
+    .eq("stripe_connect_account_id", accountId)
+    .maybeSingle();
+  if (!billing) return;
+
+  const { data: business } = await admin
+    .from("businesses")
+    .select("name, email, owner_id, currency")
+    .eq("id", billing.business_id as string)
+    .maybeSingle();
+  if (!business) return;
+
+  let ownerEmail = (business.email as string).trim();
+  if (!ownerEmail) {
+    const { data } = await admin.auth.admin.getUserById(business.owner_id as string);
+    ownerEmail = data.user?.email ?? "";
+  }
+
+  const details = {
+    businessName: business.name as string,
+    amount: formatMoney(payout.amount, (payout.currency || (business.currency as string)).toUpperCase()),
+    reason: payout.failure_message || payout.failure_code || "no reason given",
+  };
+  const billingUrl = `${getDashboardUrl()}/billing`;
+  const inboxEmail = process.env.SUPPORT_INBOX_EMAIL;
+
+  const attempts: Promise<unknown>[] = [];
+  if (ownerEmail) attempts.push(sendEmail({ to: ownerEmail, ...payoutFailedEmail(details, billingUrl) }));
+  if (inboxEmail) attempts.push(sendEmail({ to: inboxEmail, ...payoutFailedStaffNotifyEmail(details) }));
+  await Promise.allSettled(attempts);
 }
 
 async function syncSubscription(subscription: Stripe.Subscription): Promise<void> {

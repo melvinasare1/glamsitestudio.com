@@ -311,6 +311,43 @@ export function platformReferralStaffNotifyEmail(d: PlatformReferralDetails): Re
 }
 
 // ---------------------------------------------------------------------------
+// Connect payout templates
+// ---------------------------------------------------------------------------
+
+export type PayoutFailedDetails = {
+  businessName: string;
+  /** Already formatted, e.g. "£42.00". */
+  amount: string;
+  reason: string;
+};
+
+/** To the salon owner, when Stripe's payout to their bank bounces. */
+export function payoutFailedEmail(d: PayoutFailedDetails, billingUrl: string): Rendered {
+  const intro = `Stripe tried to pay out ${escapeHtml(d.amount)} to your bank account and it failed: ${escapeHtml(
+    d.reason
+  )}. Update your bank details to get paid.`;
+  return {
+    subject: "A payout to your bank failed",
+    html: layout("A payout failed", intro, "", { label: "Fix in Billing", href: billingUrl }),
+    text: `A payout failed\n\nStripe tried to pay out ${d.amount} to your bank account and it failed: ${d.reason}. Update your bank details to get paid.\n\n${billingUrl}`,
+  };
+}
+
+/** To our support inbox, for visibility when a salon's payout bounces. */
+export function payoutFailedStaffNotifyEmail(d: PayoutFailedDetails): Rendered {
+  const table = rows([
+    ["Business", d.businessName],
+    ["Amount", d.amount],
+    ["Reason", d.reason],
+  ]);
+  return {
+    subject: `Payout failed: ${d.businessName}`,
+    html: layout("Connect payout failed", "A salon's Stripe payout to their bank bounced.", table.html),
+    text: `Connect payout failed\n\n${table.text}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Done-for-you lead templates
 // ---------------------------------------------------------------------------
 
