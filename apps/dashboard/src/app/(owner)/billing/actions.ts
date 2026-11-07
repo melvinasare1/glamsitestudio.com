@@ -306,6 +306,20 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
   const admin = createAdminClient();
   let accountId = billingRow?.stripe_connect_account_id as string | null | undefined;
 
+  // createBooking's Checkout session (apps/web/src/lib/booking.ts) is a
+  // destination charge with no `on_behalf_of` -- we stay the merchant of
+  // record and just transfer the salon's cut out. Per Stripe's own v2
+  // Accounts docs that calls for the Recipient configuration, not Merchant
+  // (Merchant is for when the connected account itself is the merchant of
+  // record, e.g. direct charges). Request both: Merchant/card_payments is
+  // what Express's own dashboard needs to show the owner their payment
+  // activity, Recipient/stripe_balance.stripe_transfers is what actually
+  // lets the transfer into their balance succeed -- without it Checkout
+  // fails with "insufficient_capabilities_for_transfer".
+  const recipientCapability = {
+    configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
+  } as const;
+
   try {
     const stripe = getStripe();
     if (!accountId) {
@@ -326,6 +340,7 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
             merchant: {
               capabilities: { card_payments: { requested: true } },
             },
+            ...recipientCapability.configuration,
           },
           defaults: {
             responsibilities: { fees_collector: "stripe", losses_collector: "stripe" },
@@ -342,6 +357,11 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
         console.error("[dashboard] save Stripe Connect account", error);
         return { ok: false, error: "Something went wrong saving that. Please try again." };
       }
+    } else {
+      // An account from before the Recipient configuration was requested
+      // (or one that otherwise never got it) -- idempotent to re-request on
+      // an account that already has it.
+      await stripe.v2.core.accounts.update(accountId, recipientCapability);
     }
 
     const returnUrl = `${getDashboardUrl()}/billing`;
