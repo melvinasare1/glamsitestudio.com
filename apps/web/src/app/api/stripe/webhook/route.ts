@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { ACTIVE_STATUSES, bookingRulesFromRow } from "@glamsite/shared/booking";
 import { appointmentFromRow, businessFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
-import { getStripe } from "@glamsite/shared/stripe";
+import { getStripe, refundConnectPayment } from "@glamsite/shared/stripe";
 import { sendBookingConfirmationEmails } from "@/lib/booking";
 
 /**
@@ -143,7 +143,7 @@ async function confirmBookingPayment(session: Stripe.Checkout.Session): Promise<
     if (conflict.data || !stillUpcoming) {
       if (paymentIntentId) {
         try {
-          await getStripe().refunds.create({ payment_intent: paymentIntentId });
+          await refundConnectPayment(getStripe(), paymentIntentId, row.deposit_cents as number);
         } catch (refundError) {
           console.error("[stripe webhook] refund for expired booking slot failed", appointmentId, refundError);
         }

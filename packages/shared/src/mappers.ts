@@ -21,6 +21,10 @@ import type {
   Enquiry,
   HostingTier,
   OpeningHours,
+  PlatformReferral,
+  PlatformReferralEarning,
+  PlatformReferralPayoutDetails,
+  PlatformReferralStatus,
   ReferralStatus,
   Service,
   ServiceCategory,
@@ -65,6 +69,7 @@ export function businessFromRow(row: Row): Business {
     slug: str(row.slug),
     templateId: str(row.template_id, DEFAULT_TEMPLATE_ID),
     status: oneOf<BusinessStatus>(row.status, ["draft", "live", "paused"], "draft"),
+    previewToken: str(row.preview_token),
     customDomain: strOrNull(row.custom_domain),
     customDomainVerified: bool(row.custom_domain_verified),
     email: str(row.email),
@@ -102,6 +107,7 @@ export function billingFromRow(row: Row): BusinessBilling {
       "none"
     ),
     bookingAddon: bool(row.booking_addon),
+    stripeBookingAddonItemId: strOrNull(row.stripe_booking_addon_item_id),
     currentPeriodEnd: strOrNull(row.current_period_end),
     stripeCustomerId: strOrNull(row.stripe_customer_id),
     stripeSubscriptionId: strOrNull(row.stripe_subscription_id),
@@ -227,6 +233,49 @@ export function clientReferralFromRow(row: Row): ClientReferral {
     referrerEmail: referrer ? str(referrer.email) : null,
     referredName: referred ? str(referred.name) : null,
     referredEmail: referred ? str(referred.email) : null,
+  };
+}
+
+export function platformReferralFromRow(row: Row): PlatformReferral {
+  return {
+    id: str(row.id),
+    referrerBusinessId: str(row.referrer_business_id),
+    referredBusinessName: str(row.referred_business_name),
+    referredContactName: str(row.referred_contact_name),
+    referredContactEmail: str(row.referred_contact_email),
+    referredContactPhone: str(row.referred_contact_phone),
+    status: oneOf<PlatformReferralStatus>(
+      row.status,
+      ["submitted", "contacted", "signed_up", "active", "lost"],
+      "submitted"
+    ),
+    referredBusinessId: strOrNull(row.referred_business_id),
+    staffNotes: str(row.staff_notes),
+    createdAt: str(row.created_at),
+    updatedAt: str(row.updated_at),
+  };
+}
+
+export function platformReferralEarningFromRow(row: Row): PlatformReferralEarning {
+  return {
+    id: str(row.id),
+    referralId: str(row.referral_id),
+    referrerBusinessId: str(row.referrer_business_id),
+    yearMonth: str(row.year_month),
+    grossCents: int(row.gross_cents),
+    commissionCents: int(row.commission_cents),
+    createdAt: str(row.created_at),
+  };
+}
+
+export function platformReferralPayoutDetailsFromRow(row: Row): PlatformReferralPayoutDetails {
+  return {
+    businessId: str(row.business_id),
+    accountName: str(row.account_name),
+    accountNumber: str(row.account_number),
+    sortCode: str(row.sort_code),
+    notes: str(row.notes),
+    updatedAt: str(row.updated_at),
   };
 }
 

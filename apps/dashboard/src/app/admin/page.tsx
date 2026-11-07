@@ -1,15 +1,25 @@
+import Link from "next/link";
 import { HOSTING_TIER_LABEL, HOSTING_TIER_PRICE_CENTS } from "@glamsite/shared/billing";
-import { businessFromRow, billingFromRow } from "@glamsite/shared/mappers";
+import { businessFromRow, billingFromRow, platformReferralFromRow } from "@glamsite/shared/mappers";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
 import { getTemplate } from "@glamsite/shared/templates";
-import type { Business, BusinessBilling, BusinessStatus } from "@glamsite/shared/types";
+import type { Business, BusinessBilling, BusinessStatus, PlatformReferralStatus } from "@glamsite/shared/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState, PageBody, PageHeader, Panel } from "@/components/page";
 
 const STATUS_LABEL: Record<BusinessStatus, string> = {
   draft: "Draft",
   live: "Live",
   paused: "Paused",
+};
+
+const REFERRAL_STATUS_LABEL: Record<PlatformReferralStatus, string> = {
+  submitted: "Submitted",
+  contacted: "Contacted",
+  signed_up: "Signed up",
+  active: "Active",
+  lost: "Not proceeding",
 };
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -35,13 +45,18 @@ function formatGbp(cents: number): string {
 export default async function AdminOverviewPage() {
   const supabase = createAdminClient();
 
-  const [{ data: businessRows, error: businessError }, { data: billingRows, error: billingError }] =
-    await Promise.all([
-      supabase.from("businesses").select("*").order("created_at", { ascending: false }),
-      supabase.from("business_billing").select("*"),
-    ]);
+  const [
+    { data: businessRows, error: businessError },
+    { data: billingRows, error: billingError },
+    { data: referralRows, error: referralError },
+  ] = await Promise.all([
+    supabase.from("businesses").select("*").order("created_at", { ascending: false }),
+    supabase.from("business_billing").select("*"),
+    supabase.from("platform_referrals").select("*").order("created_at", { ascending: false }),
+  ]);
   if (businessError) console.error("[admin] businesses lookup failed", businessError.message);
   if (billingError) console.error("[admin] business_billing lookup failed", billingError.message);
+  if (referralError) console.error("[admin] platform_referrals lookup failed", referralError.message);
 
   const businesses: Business[] = (businessRows ?? []).map(businessFromRow);
   const billingByBusinessId = new Map<string, BusinessBilling>(
@@ -50,6 +65,10 @@ export default async function AdminOverviewPage() {
       return [billing.businessId, billing];
     })
   );
+  const businessNameById = new Map(businesses.map((business) => [business.id, business.name || business.slug]));
+
+  const referrals = (referralRows ?? []).map(platformReferralFromRow);
+  const openReferrals = referrals.filter((referral) => referral.status !== "active" && referral.status !== "lost");
 
   const statusCounts: Record<BusinessStatus, number> = { draft: 0, live: 0, paused: 0 };
   for (const business of businesses) statusCounts[business.status]++;
@@ -82,6 +101,37 @@ export default async function AdminOverviewPage() {
             <Stat label="Draft" value={statusCounts.draft} />
             <Stat label="Paused" value={statusCounts.paused} />
           </dl>
+        </Panel>
+
+        <Panel
+          title="Earn referrals"
+          description="Business-to-business referrals awaiting action. Full pipeline and earnings are on the Earn referrals page."
+          actions={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/earn">View all ({referrals.length})</Link>
+            </Button>
+          }
+        >
+          {openReferrals.length === 0 ? (
+            <EmptyState title="Nothing waiting on you">
+              {referrals.length === 0 ? "No referrals submitted yet." : "Every referral is either active or closed out."}
+            </EmptyState>
+          ) : (
+            <ul className="divide-y divide-black/5 rounded-xl border border-black/5 text-sm">
+              {openReferrals.map((referral) => (
+                <li key={referral.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{referral.referredBusinessName}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      Referred by {businessNameById.get(referral.referrerBusinessId) ?? "Unknown business"} ·{" "}
+                      {new Date(referral.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge variant="outline">{REFERRAL_STATUS_LABEL[referral.status]}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
 
         <Panel

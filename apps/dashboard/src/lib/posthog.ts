@@ -109,3 +109,134 @@ export async function getReferrers(businessId: string, days = 30, limit = 10): P
   `);
   return (result?.results ?? []).map(([source, visits]) => ({ source: String(source ?? "Direct"), visits: Number(visits ?? 0) }));
 }
+
+/*
+ * Everything below is for the platform-wide admin Analytics page
+ * (apps/dashboard/src/app/admin/analytics) — same event data as above, just
+ * aggregated across every business instead of filtered to one.
+ */
+
+/** Visit and funnel counts across every business over the last `days` days. */
+export async function getPlatformVisitStats(days = 30): Promise<VisitStats> {
+  const result = await runHogQL(`
+    select
+      countIf(event = '$pageview') as pageviews,
+      count(distinct person_id) as visitors,
+      countIf(event = 'enquiry_submitted') as enquiries,
+      countIf(event = 'booking_started') as bookings_started,
+      countIf(event = 'checkout_started') as checkouts_started,
+      countIf(event = 'booking_created') as bookings_created
+    from events
+    where timestamp >= now() - interval ${days} day
+  `);
+  const row = result?.results?.[0];
+  if (!row) return EMPTY_STATS;
+  const [pageviews, visitors, enquiries, bookingsStarted, checkoutsStarted, bookingsCreated] = row as number[];
+  return { pageviews: pageviews ?? 0, visitors: visitors ?? 0, enquiries: enquiries ?? 0, bookingsStarted: bookingsStarted ?? 0, checkoutsStarted: checkoutsStarted ?? 0, bookingsCreated: bookingsCreated ?? 0 };
+}
+
+export type DailyPoint = { date: string; visitors: number; pageviews: number };
+
+/** Visitors and pageviews per day, across every business, for the trend chart. */
+export async function getPlatformDailyTrend(days = 30): Promise<DailyPoint[]> {
+  const result = await runHogQL(`
+    select
+      toDate(timestamp) as day,
+      count(distinct person_id) as visitors,
+      countIf(event = '$pageview') as pageviews
+    from events
+    where timestamp >= now() - interval ${days} day
+    group by day
+    order by day asc
+  `);
+  return (result?.results ?? []).map(([day, visitors, pageviews]) => ({
+    date: String(day),
+    visitors: Number(visitors ?? 0),
+    pageviews: Number(pageviews ?? 0),
+  }));
+}
+
+/** Most-viewed pages across every business over the last `days` days. */
+export async function getPlatformTopPages(days = 30, limit = 15): Promise<TopPage[]> {
+  const result = await runHogQL(`
+    select properties.$pathname as path, count() as views
+    from events
+    where event = '$pageview'
+      and timestamp >= now() - interval ${days} day
+    group by path
+    order by views desc
+    limit ${limit}
+  `);
+  return (result?.results ?? []).map(([path, views]) => ({ path: String(path ?? "/"), views: Number(views ?? 0) }));
+}
+
+/** Where visitors came from, across every business, over the last `days` days. */
+export async function getPlatformReferrers(days = 30, limit = 10): Promise<Referrer[]> {
+  const result = await runHogQL(`
+    select
+      coalesce(nullIf(properties.$referring_domain, ''), 'Direct') as source,
+      count(distinct person_id) as visits
+    from events
+    where event = '$pageview'
+      and timestamp >= now() - interval ${days} day
+    group by source
+    order by visits desc
+    limit ${limit}
+  `);
+  return (result?.results ?? []).map(([source, visits]) => ({ source: String(source ?? "Direct"), visits: Number(visits ?? 0) }));
+}
+
+export type NamedCount = { name: string; count: number };
+
+/** Generic "count pageviews by this property" helper for browser/OS/device/country breakdowns. */
+async function getPageviewBreakdown(property: string, days: number, limit: number): Promise<NamedCount[]> {
+  const result = await runHogQL(`
+    select coalesce(nullIf(properties.${property}, ''), 'Unknown') as name, count() as c
+    from events
+    where event = '$pageview'
+      and timestamp >= now() - interval ${days} day
+    group by name
+    order by c desc
+    limit ${limit}
+  `);
+  return (result?.results ?? []).map(([name, count]) => ({ name: String(name ?? "Unknown"), count: Number(count ?? 0) }));
+}
+
+export const getBrowserBreakdown = (days = 30, limit = 8) => getPageviewBreakdown("$browser", days, limit);
+export const getOsBreakdown = (days = 30, limit = 8) => getPageviewBreakdown("$os", days, limit);
+export const getDeviceTypeBreakdown = (days = 30, limit = 6) => getPageviewBreakdown("$device_type", days, limit);
+export const getCountryBreakdown = (days = 30, limit = 10) => getPageviewBreakdown("$geoip_country_name", days, limit);
+
+export type BusinessVisitStats = VisitStats & { businessId: string };
+
+/** Same funnel counts as getVisitStats, but one row per business — for the admin per-business leaderboard. */
+export async function getVisitStatsByBusiness(days = 30): Promise<BusinessVisitStats[]> {
+  const result = await runHogQL(`
+    select
+      properties.business_id as business_id,
+      countIf(event = '$pageview') as pageviews,
+      count(distinct person_id) as visitors,
+      countIf(event = 'enquiry_submitted') as enquiries,
+      countIf(event = 'booking_started') as bookings_started,
+      countIf(event = 'checkout_started') as checkouts_started,
+      countIf(event = 'booking_created') as bookings_created
+    from events
+    where timestamp >= now() - interval ${days} day
+      and properties.business_id is not null
+      and properties.business_id != ''
+    group by business_id
+    order by visitors desc
+  `);
+  return (result?.results ?? []).map((row) => {
+    const [businessId, pageviews, visitors, enquiries, bookingsStarted, checkoutsStarted, bookingsCreated] = row as [string, ...number[]];
+    return {
+      businessId: String(businessId),
+      pageviews: Number(pageviews ?? 0),
+      visitors: Number(visitors ?? 0),
+      enquiries: Number(enquiries ?? 0),
+      bookingsStarted: Number(bookingsStarted ?? 0),
+      checkoutsStarted: Number(checkoutsStarted ?? 0),
+      bookingsCreated: Number(bookingsCreated ?? 0),
+    };
+  });
+}

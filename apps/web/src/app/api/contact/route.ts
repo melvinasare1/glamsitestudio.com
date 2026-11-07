@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requestIp, tooManyRequests, withinRateLimit } from "@glamsite/shared/rate-limit";
 import { createAdminClient } from "@glamsite/shared/supabase/admin";
 import { parseEnquiry } from "@/lib/contact";
 
@@ -8,6 +9,11 @@ function jsonError(message: string, status: number) {
 
 /** Contact form on a live site → enquiries (shown in that owner's dashboard). */
 export async function POST(req: NextRequest) {
+  const ip = requestIp(req.headers);
+  if (!(await withinRateLimit(`contact:${ip}`, 60, 5))) {
+    return tooManyRequests();
+  }
+
   let raw: unknown;
   try {
     raw = await req.json();

@@ -25,8 +25,9 @@ import { cn } from "@/lib/utils";
 import {
   checkInAppointment,
   createManualAppointment,
+  forfeitDeposit,
   markDepositPaid,
-  recordRefund,
+  refundDeposit,
   saveInternalNotes,
   setAppointmentStatus,
   type ManualAppointmentInput,
@@ -253,7 +254,8 @@ export function AppointmentsBoard(props: Props) {
         onStatus={changeStatus}
         onSaveNotes={(item, notes) => run(() => saveInternalNotes(item.id, notes), "Notes saved")}
         onMarkDepositPaid={(item) => run(() => markDepositPaid(item.id), "Deposit marked as paid")}
-        onRecordRefund={(item, amountCents) => run(() => recordRefund(item.id, amountCents), "Refund recorded")}
+        onRefundDeposit={(item, amountCents) => run(() => refundDeposit(item.id, amountCents), "Deposit refunded")}
+        onForfeitDeposit={(item) => run(() => forfeitDeposit(item.id), "Deposit kept")}
         onCheckIn={(item) => run(() => checkInAppointment(item.id), "Checked in")}
       />
 
@@ -288,7 +290,8 @@ function AppointmentSheet({
   onStatus,
   onSaveNotes,
   onMarkDepositPaid,
-  onRecordRefund,
+  onRefundDeposit,
+  onForfeitDeposit,
   onCheckIn,
 }: {
   appointment: Appointment | null;
@@ -298,7 +301,8 @@ function AppointmentSheet({
   onStatus: (item: Appointment, status: AppointmentStatus, message: string) => void;
   onSaveNotes: (item: Appointment, notes: string) => void;
   onMarkDepositPaid: (item: Appointment) => void;
-  onRecordRefund: (item: Appointment, amountCents: number) => void;
+  onRefundDeposit: (item: Appointment, amountCents: number) => void;
+  onForfeitDeposit: (item: Appointment) => void;
   onCheckIn: (item: Appointment) => void;
 }) {
   const [notes, setNotes] = useState("");
@@ -403,22 +407,36 @@ function AppointmentSheet({
               {appointment.depositCents > 0 && appointment.depositStatus === "paid" ? (
                 refunding ? (
                   <div className="grid gap-2">
-                    <Field id="refund-amount" label="Amount refunded">
+                    <Field
+                      id="refund-amount"
+                      label="Amount to refund"
+                      description={`Up to ${formatMoney(appointment.depositCents, appointment.currency)}. Enter less for a partial refund.`}
+                    >
                       <Input
                         id="refund-amount"
                         type="number"
                         inputMode="decimal"
                         min="0"
+                        max={(appointment.depositCents / 100).toFixed(2)}
                         step="0.01"
                         value={refundAmount}
                         onChange={(event) => setRefundAmount(event.target.value)}
                       />
                     </Field>
+                    {Number(refundAmount) * 100 > appointment.depositCents ? (
+                      <p className="text-sm text-destructive">
+                        That's more than the {formatMoney(appointment.depositCents, appointment.currency)} deposit paid.
+                      </p>
+                    ) : null}
                     <div className="flex gap-2">
                       <Button
                         size="lg"
-                        disabled={saving || !(Number(refundAmount) > 0)}
-                        onClick={() => onRecordRefund(appointment, Math.round(Number(refundAmount) * 100))}
+                        disabled={
+                          saving ||
+                          !(Number(refundAmount) > 0) ||
+                          Math.round(Number(refundAmount) * 100) > appointment.depositCents
+                        }
+                        onClick={() => onRefundDeposit(appointment, Math.round(Number(refundAmount) * 100))}
                       >
                         Confirm refund
                       </Button>
@@ -428,9 +446,23 @@ function AppointmentSheet({
                     </div>
                   </div>
                 ) : (
-                  <Button size="lg" variant="outline" disabled={saving} onClick={() => setRefunding(true)}>
-                    Record a refund
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="lg" variant="outline" disabled={saving} onClick={() => setRefunding(true)}>
+                      Refund deposit
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={() => {
+                        if (window.confirm(`Keep ${appointment.client?.name ?? "this client"}'s deposit? This can't be undone.`)) {
+                          onForfeitDeposit(appointment);
+                        }
+                      }}
+                    >
+                      Keep deposit
+                    </Button>
+                  </div>
                 )
               ) : null}
               {appointment.status === "pending" ? (

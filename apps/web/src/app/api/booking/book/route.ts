@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requestIp, tooManyRequests, withinRateLimit } from "@glamsite/shared/rate-limit";
 import { createBooking, loadBookingSite, parseBookingRequest } from "@/lib/booking";
 
 /** POST /api/booking/book: a client books an appointment on a live site. */
 export async function POST(req: NextRequest) {
+  const ip = requestIp(req.headers);
+  if (!(await withinRateLimit(`booking:book:${ip}`, 60, 8))) {
+    return tooManyRequests("Too many booking attempts. Please wait a moment and try again.");
+  }
+
   let raw: unknown;
   try {
     raw = await req.json();

@@ -39,7 +39,7 @@ import {
   type BookingEmailDetails,
 } from "@glamsite/shared/email";
 import { formatAddress, formatServicePrice } from "@glamsite/shared/format";
-import { getStripe } from "@glamsite/shared/stripe";
+import { getStripe, refundConnectPayment } from "@glamsite/shared/stripe";
 import {
   appointmentFromRow,
   billingFromRow,
@@ -840,9 +840,39 @@ export async function cancelByToken(token: string): Promise<{ ok: true } | { ok:
   const supabase = admin();
   if (!supabase) return { ok: false, error: "Please try again in a moment.", status: 503 };
 
+  // A client cancelling within the policy's notice window gets their deposit
+  // back automatically — the owner shouldn't have to notice and refund it by
+  // hand every time someone cancels in time. Read the payment intent fresh
+  // rather than trust the mapped Appointment type, which doesn't carry it.
+  const update: Record<string, unknown> = {
+    status: "cancelled",
+    cancelled_at: new Date().toISOString(),
+    cancelled_by: "client",
+  };
+  if (appointment.depositStatus === "paid" && appointment.depositCents > 0) {
+    const { data: row } = await supabase
+      .from("appointments")
+      .select("stripe_payment_intent_id")
+      .eq("id", appointment.id)
+      .maybeSingle();
+    const paymentIntentId = row?.stripe_payment_intent_id as string | null;
+    if (paymentIntentId) {
+      try {
+        await refundConnectPayment(getStripe(), paymentIntentId, appointment.depositCents);
+        update.deposit_status = "refunded";
+        update.refund_cents = appointment.depositCents;
+        update.refunded_at = new Date().toISOString();
+      } catch (refundError) {
+        // Cancellation still goes through; the owner can refund manually
+        // from the appointment panel if the automatic refund failed.
+        console.error("[booking] auto-refund on client cancel failed", appointment.id, refundError);
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("appointments")
-    .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by: "client" })
+    .update(update)
     .eq("id", appointment.id)
     .eq("business_id", business.id)
     .in("status", ACTIVE_STATUSES);

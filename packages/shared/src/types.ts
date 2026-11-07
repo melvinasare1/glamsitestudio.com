@@ -19,6 +19,8 @@ export type Business = {
   slug: string;
   templateId: string;
   status: BusinessStatus;
+  /** Lets the owner preview the site before it's live: /preview/{previewToken} on their site URL. */
+  previewToken: string;
   customDomain: string | null;
   customDomainVerified: boolean;
   email: string;
@@ -59,6 +61,7 @@ export type BusinessBilling = {
   hostingTier: HostingTier;
   subscriptionStatus: SubscriptionStatus;
   bookingAddon: boolean;
+  stripeBookingAddonItemId: string | null;
   currentPeriodEnd: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
@@ -183,6 +186,47 @@ export type ClientReferral = {
   /** Embedded when the query selects `referred:referred_client_id(name, email)`. */
   referredName: string | null;
   referredEmail: string | null;
+};
+
+export type PlatformReferralStatus = "submitted" | "contacted" | "signed_up" | "active" | "lost";
+
+/** A business-to-business referral: one business owner refers another to the platform ("Earn"). */
+export type PlatformReferral = {
+  id: string;
+  referrerBusinessId: string;
+  referredBusinessName: string;
+  referredContactName: string;
+  referredContactEmail: string;
+  referredContactPhone: string;
+  status: PlatformReferralStatus;
+  /** Set by staff once the referred business actually signs up. */
+  referredBusinessId: string | null;
+  /** Staff-only context; never shown to the referrer. */
+  staffNotes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** One calendar month's commission on a referral, recorded by staff from the referred business's real hosting spend. */
+export type PlatformReferralEarning = {
+  id: string;
+  referralId: string;
+  referrerBusinessId: string;
+  /** "2026-11" */
+  yearMonth: string;
+  grossCents: number;
+  commissionCents: number;
+  createdAt: string;
+};
+
+/** Where staff send a referrer's commission. Plain bank details, not Stripe -- this is platform revenue share, not a salon's own booking payment. */
+export type PlatformReferralPayoutDetails = {
+  businessId: string;
+  accountName: string;
+  accountNumber: string;
+  sortCode: string;
+  notes: string;
+  updatedAt: string;
 };
 
 export type Enquiry = {

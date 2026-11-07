@@ -5,17 +5,11 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
 
 ## Deferred after stage 2
 
-- **Draft preview.** Owners can't see their site until it's published,
-  because public pages read as an anonymous visitor. Trigger: first
-  customer feedback, or before the templates are designed (whichever first).
 - **Opening hours save as delete-then-insert**, not one transaction. A failure
   between the two leaves no hours. Trigger: if it ever happens, move to a
   database function.
 - **Custom-domain lookups in middleware hit the database on every request.**
   Trigger: first custom domain goes live; add caching.
-- **Auth emails.** Supabase's built-in email only reaches project team
-  members, so sign-up confirmations need Resend SMTP set up in both projects.
-  Trigger: before the first real sign-up.
 - **Old Ansaa buckets** (`product-images`, `id-verification`) are empty and
   can be deleted in Supabase Storage. No trigger.
 
@@ -33,20 +27,9 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   subdomain), since sign-up no longer asks for either. Name is editable on
   Business details; the subdomain isn't editable anywhere yet. Trigger:
   stage 4 self-serve domains, or sooner if it causes support requests.
-- **Supabase's built-in auth emails (password reset on `/login`) still
-  aren't routed through Resend**, so they only reach project team members,
-  not real owners. Signup's own sign-in email now goes through Resend (see
-  Resolved), but `resetPasswordForEmail` on `/login` still relies on
-  Supabase's unconfigured sender. Trigger: before password reset is needed
-  by a real owner, or set up Resend SMTP in the Supabase dashboard.
 
 ## Deferred after booking phase 1
 
-- **Any owner can turn on Glam Site booking.** It should come with the
-  booking add-on. Trigger: stage 3 billing.
-- **No rate limit on the public booking API.** A honeypot stops simple bots,
-  but nothing stops someone filling a diary with fake bookings. Trigger: the
-  first abuse, or before 10 live sites take bookings.
 - **Losing a booking race leaves a client record** with no appointment (the
   client is saved before the time is claimed). Now visible as a "0 visits"
   row on the Customers page. Harmless; hide or clean up these rows if they
@@ -58,11 +41,6 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   https://themes.shopify.com/themes/horizon/presets/horizon — preview
   image, what it offers, a demo link, price). With only Luxe shipped,
   there's nothing to compare yet. Trigger: the second template design.
-- **Two versions of the icon library** (`lucide-react` 1.x in the dashboard,
-  0.408 in the site app). The dashboard header's menu icon renders
-  differently on the server and in the browser, so React reports a hydration
-  error and re-renders the page in the browser. It was already on `main`.
-  Trigger: next dashboard UI work; align both apps on one version.
 
 - **True multi-page templates.** Every template today (Luxe, Salon, Barber)
   renders as one scrolling page at `/sites/[slug]`; `sections` only picks
@@ -82,6 +60,59 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   (Crisp, Chatwoot self-hosted) once there's real support volume.
 
 ## Resolved
+
+- **Done-for-you had no fulfillment flow.** The landing page's "done for
+  you" lead form asked for an intake write-up and just said "we'll be in
+  touch" — no call ever got booked, and leads were inserted with no
+  notification, so nobody on the team knew to follow up. Fixed: the form
+  (`apps/web/src/components/marketing/LeadForm.tsx`) now asks for a time to
+  call instead of free-text details, picked from
+  `callSlotOptions()` (`packages/shared/src/call-slots.ts`, weekdays, UK
+  office hours, at least a day's notice — reuses `booking.ts`'s timezone
+  helpers, not its per-business availability engine, since this is our own
+  team's calendar, not a salon's). `/api/leads` validates the submitted
+  time with `isValidCallSlot()` before storing it as `leads.call_at`
+  (`supabase/migrations/20261108000000_leads_call_at.sql`) and emails
+  `SUPPORT_INBOX_EMAIL` via the new `doneForYouCallEmail()` template
+  (`packages/shared/src/email.ts`) so the booked time doesn't go unnoticed.
+
+- **Draft preview.** Owners couldn't see their site until it was published,
+  because public pages read as an anonymous visitor and `businesses_read`
+  RLS only returns `status = 'live'` rows to anon. Fixed: every business
+  gets a `preview_token` (uuid, `supabase/migrations/20261107000000_business_preview_token.sql`),
+  and `apps/web/src/app/sites/[slug]/preview/[token]/page.tsx` renders the
+  site via `loadDraftSite()` (`apps/web/src/lib/site.ts`), which uses the
+  service-role client and checks the token instead of relying on RLS —
+  `businesses_read` is unchanged, so anonymous visitors still only ever see
+  live sites. The dashboard's publish panel links to this with a "Preview"
+  button, before and after launch, whenever the site isn't live. The token
+  is stripped from the `Business` object before it reaches a live site's
+  own page (`loadSite`/`loadSections` in the same file), so it's never sent
+  to a visitor's browser.
+
+- **Two versions of the icon library** (`lucide-react` 1.x in the dashboard,
+  0.408 in the site app) caused a hydration error on the dashboard header's
+  menu icon on every login. Fixed: downgraded the dashboard to `^0.408.0`
+  (`apps/dashboard/package.json`) to match the site app, the version already
+  proven in this codebase; the `Icon`-suffixed names the dashboard uses
+  (`ArrowDownIcon`, `CircleCheckIcon`, etc.) exist at 0.408.0 too, confirmed
+  by a clean `tsc --noEmit` and `next build` on the dashboard.
+
+- **Any owner could turn on Glam Site booking for free.** It should come
+  with the booking add-on; the trigger (stage 3 billing) was hit but the
+  gate was never built. Fixed: `business_billing.booking_addon` (already in
+  the schema, defaulting to `false`) is now enforced — `saveBooking`
+  (`apps/dashboard/src/app/(owner)/booking/actions.ts`) refuses `"glamsite"`
+  mode unless it's on, and the Booking page's mode picker shows the option
+  locked with a link to Billing. Owners turn it on from the new "Booking
+  add-on" panel on the Billing page (`enableBookingAddon`/
+  `disableBookingAddon`, `apps/dashboard/src/app/(owner)/billing/actions.ts`):
+  $10/month as a second item on their existing hosting subscription, the
+  same price_data-on-a-subscription-item approach `changeHostingTier`
+  already uses. Businesses already using Glam Site booking before this
+  shipped were grandfathered in by
+  `supabase/migrations/20261106000000_booking_addon_gate.sql`, so nobody
+  already relying on it lost it unannounced.
 
 - **Publishing wasn't tied to payment; sign-up was free and self-serve.**
   Both fixed together: sign-up creates a draft business for free (now on
@@ -109,6 +140,26 @@ when its trigger is hit, or when we decide to. Keep resolved items, marked done.
   (`"magiclink"`); for the latter we now only email the sign-in link, via
   Resend, and require it to be opened from the recipient's own inbox before
   a session is created.
+
+- **Password reset still relied on Supabase's unconfigured email sender.**
+  `resetPasswordForEmail` on `/login` sent through Supabase Auth's own
+  mailer, which (per docs/infrastructure.md) only reaches project team
+  members until SMTP is hand-configured in the Supabase dashboard. Fixed
+  the same way sign-up's sign-in link works: `requestPasswordReset`
+  (`login/actions.ts`) generates the recovery link itself
+  (`admin.auth.admin.generateLink`) and emails it through Resend, so it no
+  longer depends on that dashboard setting. The support ticket route was
+  also moved off a direct `resend` SDK call onto the same shared
+  `sendEmail()` helper, so every outgoing email in the app now goes through
+  one path.
+
+- **No rate limit on the public booking API** (and contact/leads/support).
+  Added a Postgres-backed fixed-window limiter (`check_rate_limit()`,
+  `supabase/migrations/20261105000000_rate_limits.sql`, called via
+  `@glamsite/shared/rate-limit`) keyed by IP for the public routes and by
+  user id for the authenticated support route. An in-memory counter
+  wouldn't work across Vercel's serverless instances, so this uses the
+  database every instance already shares.
 
 ---
 

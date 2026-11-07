@@ -39,8 +39,13 @@ Setup for each project:
 3. Auth → URL configuration: site URL = the dashboard URL; add redirect URLs
    for `/auth/callback` on the dashboard domain (and `localhost:3001` on
    staging).
-4. Auth → SMTP: use Resend's SMTP settings. Supabase's built-in email only
-   sends to team members, so invites and password resets fail without this.
+4. Auth → SMTP: not required. Every auth email the app sends (sign-up's
+   sign-in link, password reset) is generated server-side with
+   `admin.auth.admin.generateLink()` and emailed ourselves through Resend's
+   HTTP API (`packages/shared/src/email.ts`), not Supabase's own mailer —
+   see `apps/dashboard/src/app/signup/actions.ts` and `login/actions.ts`.
+   Supabase's built-in email only reaches project team members, which is
+   exactly why this app never relies on it.
 5. Run the security and performance advisors and fix anything flagged.
 
 ## Vercel

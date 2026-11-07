@@ -18,15 +18,16 @@ import { RulesForm, StaffHours, TimeOffPanel } from "./booking-settings";
 export const dynamic = "force-dynamic";
 
 export default async function BookingPage() {
-  const { business } = await requireBusiness();
+  const { session, business } = await requireBusiness();
   const online = business.bookingMode === "glamsite";
+  const bookingAddon = session.billing?.bookingAddon ?? false;
 
   if (!online) {
     return (
       <>
         <PageHeader title="Booking" />
         <PageBody>
-          <BookingForm business={business} />
+          <BookingForm business={business} bookingAddon={bookingAddon} />
         </PageBody>
       </>
     );
@@ -96,7 +97,7 @@ export default async function BookingPage() {
         <RulesForm rules={bookingRulesFromRow(settings.data)} currency={business.currency} />
         <StaffHours staff={team} workingHours={workingHours} openingHours={openingHours} />
         <TimeOffPanel timeOff={(timeOff.data ?? []).map(timeOffFromRow)} staff={team} timeZone={safeTimeZone(business.timezone)} />
-        <BookingForm business={business} />
+        <BookingForm business={business} bookingAddon={bookingAddon} />
       </PageBody>
     </>
   );

@@ -38,6 +38,19 @@ export async function saveBooking(input: { mode: Mode; url: string }): Promise<A
     }
   }
 
+  // Glam Site booking needs the paid booking add-on (docs/follow-ups.md:
+  // previously any owner could turn this on for free). Re-checked here,
+  // not just hidden in the UI, so the gate holds even if the add-on is
+  // never purchased through the dashboard.
+  if (input.mode === "glamsite") {
+    const { data: billingRow } = await ctx.supabase
+      .from("business_billing")
+      .select("booking_addon")
+      .eq("business_id", ctx.business.id)
+      .maybeSingle();
+    if (!billingRow?.booking_addon) return fail("Add the booking add-on from the Billing page first.");
+  }
+
   const { error } = await ctx.supabase
     .from("businesses")
     .update({ booking_mode: input.mode, booking_url: input.mode === "link" ? url : "" })
