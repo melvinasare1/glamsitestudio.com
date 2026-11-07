@@ -68,6 +68,44 @@ bug being debugged.
 
 ---
 
+## 7 Nov 2026 · `20261110000000_universal_payout_methods`
+
+**What:** reshapes `platform_referral_payout_details` so payout fields work
+for referrers outside the UK, not just UK bank transfer. Renames
+`account_number` → `identifier` and `sort_code` → `identifier_2`, and adds a
+`method` column (`bank_uk`, `iban`, `zelle`, `cashapp`, `paypal`, `interac`)
+with a check constraint, defaulting existing rows to `bank_uk`. The two
+identifier columns are now generic slots whose meaning depends on `method`
+(e.g. IBAN + BIC/SWIFT for `iban`, email/phone for `zelle`/`interac`, a
+$cashtag for `cashapp`, an email for `paypal`), documented via column
+comments. Nothing is dropped except the UK-specific column names.
+
+**File:** `supabase/migrations/20261110000000_universal_payout_methods.sql`.
+**Undo:** `supabase/rollbacks/20261110000000_universal_payout_methods.down.sql`.
+Drops `method`, then renames `identifier_2` back to `sort_code` and
+`identifier` back to `account_number`; turn off or revert the Earn payout
+details UI/actions first, since they read and write `method`/`identifier`/
+`identifier_2`.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | `platform_referral_payout_details` had UK-only `account_number`/`sort_code` columns, applied as part of `20261109000000_platform_referrals` the same session | Not checked/applied in this session |
+| Applied | Same session, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261110000000_universal_payout_methods` | — |
+| Verified | `information_schema.columns` for the table shows `business_id, account_name, identifier, identifier_2, notes, updated_at, method` | — |
+| Security advisor | Re-checked clean after the change (same pre-existing unrelated findings as above) | — |
+
+**Why this happened:** the owner-facing payout details form only asked for a
+UK account number and sort code, which doesn't work for referrers banking in
+the US, Canada, or Europe. Staff also had no visibility into payout details
+at all before this session — the admin Earn pipeline now shows them
+read-only per referral so staff can actually pay commissions out.
+
+**Still open:** production needs both this migration and
+`20261109000000_platform_referrals` before Earn ships live there.
+
+---
+
 ## 2 Nov 2026 · `20261102090000_booking_core`
 
 **What:** adds `appointments.cancelled_by` (`client` or `business`, nullable)

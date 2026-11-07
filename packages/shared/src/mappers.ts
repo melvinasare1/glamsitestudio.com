@@ -271,9 +271,10 @@ export function platformReferralEarningFromRow(row: Row): PlatformReferralEarnin
 export function platformReferralPayoutDetailsFromRow(row: Row): PlatformReferralPayoutDetails {
   return {
     businessId: str(row.business_id),
+    method: str(row.method) as PlatformReferralPayoutDetails["method"],
     accountName: str(row.account_name),
-    accountNumber: str(row.account_number),
-    sortCode: str(row.sort_code),
+    identifier: str(row.identifier),
+    identifier2: str(row.identifier_2),
     notes: str(row.notes),
     updatedAt: str(row.updated_at),
   };
