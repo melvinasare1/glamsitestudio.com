@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { PLATFORM_REFERRAL_PAYOUT_METHOD_FIELDS, PLATFORM_REFERRAL_PAYOUT_METHOD_LABEL } from "@glamsite/shared/earn";
 import { formatMoney } from "@glamsite/shared/format";
-import type { PlatformReferral, PlatformReferralEarning, PlatformReferralStatus } from "@glamsite/shared/types";
+import type { PlatformReferral, PlatformReferralEarning, PlatformReferralPayoutDetails, PlatformReferralStatus } from "@glamsite/shared/types";
 import { EmptyState, Field, Panel } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,52 @@ function currentYearMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+/** Read-only -- payout details are owner-managed on their own Earn page; staff just need to see them to actually pay out. */
+function PayoutDetails({ details }: { details: PlatformReferralPayoutDetails | null }) {
+  if (!details) {
+    return <p className="text-sm text-muted-foreground">No payout details on file yet.</p>;
+  }
+  const fields = PLATFORM_REFERRAL_PAYOUT_METHOD_FIELDS[details.method];
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
+      <div>
+        <dt className="text-xs text-muted-foreground">Method</dt>
+        <dd>{PLATFORM_REFERRAL_PAYOUT_METHOD_LABEL[details.method]}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted-foreground">Name on account</dt>
+        <dd>{details.accountName || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted-foreground">{fields.identifierLabel}</dt>
+        <dd>{details.identifier || "—"}</dd>
+      </div>
+      {fields.identifier2Label ? (
+        <div>
+          <dt className="text-xs text-muted-foreground">{fields.identifier2Label}</dt>
+          <dd>{details.identifier2 || "—"}</dd>
+        </div>
+      ) : null}
+      {details.notes ? (
+        <div className="col-span-full">
+          <dt className="text-xs text-muted-foreground">Notes</dt>
+          <dd>{details.notes}</dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function ReferralCard({
   referral,
   businesses,
   referrerName,
+  payoutDetails,
 }: {
   referral: PlatformReferral;
   businesses: { id: string; name: string }[];
   referrerName: string;
+  payoutDetails: PlatformReferralPayoutDetails | null;
 }) {
   const { pending, run } = useAction();
   const [status, setStatus] = useState<PlatformReferralStatus>(referral.status);
@@ -135,6 +174,11 @@ function ReferralCard({
           {pending ? "Saving…" : "Record 15% earning"}
         </Button>
       </form>
+
+      <div className="rounded-lg border border-black/5 bg-mist/60 p-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Pay {referrerName} here</p>
+        <PayoutDetails details={payoutDetails} />
+      </div>
     </li>
   );
 }
@@ -144,11 +188,13 @@ export function EarnAdminManager({
   earnings,
   businesses,
   referrerNameById,
+  payoutDetailsByBusinessId,
 }: {
   referrals: PlatformReferral[];
   earnings: PlatformReferralEarning[];
   businesses: { id: string; name: string }[];
   referrerNameById: Record<string, string>;
+  payoutDetailsByBusinessId: Record<string, PlatformReferralPayoutDetails>;
 }) {
   const earningsByReferral = new Map<string, PlatformReferralEarning[]>();
   for (const earning of earnings) {
@@ -170,6 +216,7 @@ export function EarnAdminManager({
                 referral={referral}
                 businesses={businesses}
                 referrerName={referrerNameById[referral.referrerBusinessId] ?? "Unknown business"}
+                payoutDetails={payoutDetailsByBusinessId[referral.referrerBusinessId] ?? null}
               />
             ))}
           </ul>

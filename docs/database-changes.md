@@ -35,6 +35,110 @@ session has already applied the change.
 
 ---
 
+## 7 Nov 2026 · `20261111000000_appointment_deposit_events`
+
+**What:** adds `appointment_deposit_events`, an append-only log of every
+refund/forfeit on an appointment's deposit (`kind`: `refunded` or
+`forfeited`, `amount_cents`, `created_at`), scoped by `business_id` with the
+same owner-RLS pattern as `appointments`. Needed because
+`appointments.refund_cents`/`refunded_at` only ever held the latest refund,
+so a deposit could never be refunded in two parts and forfeits left no
+record at all. Nothing existing is dropped or rewritten.
+
+**File:** `supabase/migrations/20261111000000_appointment_deposit_events.sql`.
+**Undo:** `supabase/rollbacks/20261111000000_appointment_deposit_events.down.sql`.
+Drops the table; turn off or revert the refund/forfeit UI and actions first,
+since they insert into and read from it.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | Checked via `list_migrations`: not applied | Not checked/applied in this session |
+| Applied | Same session, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261111000000_appointment_deposit_events` | — |
+| Verified | `select count(*) from appointment_deposit_events` succeeds (0 rows) | — |
+| Security advisor | Clean for the new table (only the same pre-existing, unrelated findings as above) | — |
+
+**Why this happened:** Phase 3 (refunds and no-show rules) was mostly built
+already, but owners could only ever record one refund per appointment and
+had no visibility into deposit history; marking a no-show also didn't
+prompt the owner to keep the deposit.
+
+**Still open:** production needs this migration before the feature ships
+live there.
+
+---
+
+## 7 Nov 2026 · `20261109000000_platform_referrals`
+
+**What:** adds three new tables for the "Earn" business-to-business referral
+program: `platform_referrals`, `platform_referral_earnings`,
+`platform_referral_payout_details`, with RLS policies scoping owners to their
+own rows (insert/select only; staff/service-role does everything else).
+Nothing existing is dropped or rewritten.
+
+**File:** `supabase/migrations/20261109000000_platform_referrals.sql`.
+**Undo:** `supabase/rollbacks/20261109000000_platform_referrals.down.sql`
+(written alongside this log entry — missing when the feature first merged).
+Drops all three tables; turn off the owner-facing Earn page and admin Earn
+pipeline first, since both read/write them.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | Migration file existed in the repo (merged with the Earn feature) but was never applied; checked via `list_migrations` and `information_schema.tables` — no `platform_referral*` tables present | Not checked/applied in this session |
+| Applied | 10:59:35 UTC, history version `20261107105935`, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261109000000_platform_referrals` | — |
+| Verified | `select count(*) from platform_referrals` succeeds (0 rows) | — |
+| Security advisor | Clean for the new tables (only pre-existing, unrelated findings: `leads` and `rate_limits` RLS-enabled-no-policy, and leaked-password-protection) | — |
+
+**Why this happened:** the Earn feature's migration file was committed but
+the apply step was missed, so the owner-facing referral form failed on every
+submit with a generic "something went wrong" error until this was caught and
+fixed.
+
+**Still open:** production needs the same migration before Earn ships live
+there — not done in this session, since it wasn't needed to fix the staging
+bug being debugged.
+
+---
+
+## 7 Nov 2026 · `20261110000000_universal_payout_methods`
+
+**What:** reshapes `platform_referral_payout_details` so payout fields work
+for referrers outside the UK, not just UK bank transfer. Renames
+`account_number` → `identifier` and `sort_code` → `identifier_2`, and adds a
+`method` column (`bank_uk`, `iban`, `zelle`, `cashapp`, `paypal`, `interac`)
+with a check constraint, defaulting existing rows to `bank_uk`. The two
+identifier columns are now generic slots whose meaning depends on `method`
+(e.g. IBAN + BIC/SWIFT for `iban`, email/phone for `zelle`/`interac`, a
+$cashtag for `cashapp`, an email for `paypal`), documented via column
+comments. Nothing is dropped except the UK-specific column names.
+
+**File:** `supabase/migrations/20261110000000_universal_payout_methods.sql`.
+**Undo:** `supabase/rollbacks/20261110000000_universal_payout_methods.down.sql`.
+Drops `method`, then renames `identifier_2` back to `sort_code` and
+`identifier` back to `account_number`; turn off or revert the Earn payout
+details UI/actions first, since they read and write `method`/`identifier`/
+`identifier_2`.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | `platform_referral_payout_details` had UK-only `account_number`/`sort_code` columns, applied as part of `20261109000000_platform_referrals` the same session | Not checked/applied in this session |
+| Applied | Same session, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261110000000_universal_payout_methods` | — |
+| Verified | `information_schema.columns` for the table shows `business_id, account_name, identifier, identifier_2, notes, updated_at, method` | — |
+| Security advisor | Re-checked clean after the change (same pre-existing unrelated findings as above) | — |
+
+**Why this happened:** the owner-facing payout details form only asked for a
+UK account number and sort code, which doesn't work for referrers banking in
+the US, Canada, or Europe. Staff also had no visibility into payout details
+at all before this session — the admin Earn pipeline now shows them
+read-only per referral so staff can actually pay commissions out.
+
+**Still open:** production needs both this migration and
+`20261109000000_platform_referrals` before Earn ships live there.
+
+---
+
 ## 2 Nov 2026 · `20261102090000_booking_core`
 
 **What:** adds `appointments.cancelled_by` (`client` or `business`, nullable)

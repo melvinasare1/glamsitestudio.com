@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { platformReferralStaffNotifyEmail, sendEmail } from "@glamsite/shared/email";
+import type { PlatformReferralPayoutMethod } from "@glamsite/shared/types";
 import { dbError, fail, ownerContext, type ActionResult } from "@/lib/business";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,9 +62,10 @@ export async function submitPlatformReferral(input: {
 
 /** Where we send this business's Earn commission. Owner-managed. */
 export async function setPlatformReferralPayoutDetails(input: {
+  method: PlatformReferralPayoutMethod;
   accountName: string;
-  accountNumber: string;
-  sortCode: string;
+  identifier: string;
+  identifier2: string;
   notes: string;
 }): Promise<ActionResult> {
   const ctx = await ownerContext();
@@ -72,9 +74,10 @@ export async function setPlatformReferralPayoutDetails(input: {
 
   const { error } = await supabase.from("platform_referral_payout_details").upsert({
     business_id: business.id,
+    method: input.method,
     account_name: input.accountName.trim(),
-    account_number: input.accountNumber.trim(),
-    sort_code: input.sortCode.trim(),
+    identifier: input.identifier.trim(),
+    identifier_2: input.identifier2.trim(),
     notes: input.notes.trim(),
   });
   if (error) return dbError("set platform referral payout details", error);

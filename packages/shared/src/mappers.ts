@@ -13,6 +13,7 @@ import type {
   BusinessStatus,
   Client,
   ClientReferral,
+  DepositEvent,
   DepositStatus,
   DiscountCode,
   DiscountKind,
@@ -271,9 +272,10 @@ export function platformReferralEarningFromRow(row: Row): PlatformReferralEarnin
 export function platformReferralPayoutDetailsFromRow(row: Row): PlatformReferralPayoutDetails {
   return {
     businessId: str(row.business_id),
+    method: str(row.method) as PlatformReferralPayoutDetails["method"],
     accountName: str(row.account_name),
-    accountNumber: str(row.account_number),
-    sortCode: str(row.sort_code),
+    identifier: str(row.identifier),
+    identifier2: str(row.identifier_2),
     notes: str(row.notes),
     updatedAt: str(row.updated_at),
   };
@@ -295,6 +297,20 @@ export function enquiryFromRow(row: Row): Enquiry {
 function embedded(value: unknown): Row | null {
   if (Array.isArray(value)) return (value[0] as Row) ?? null;
   return value && typeof value === "object" ? (value as Row) : null;
+}
+
+/** For a to-many embed, e.g. `appointment_deposit_events(...)`. */
+function embeddedArray(value: unknown): Row[] {
+  return Array.isArray(value) ? (value as Row[]) : [];
+}
+
+function depositEventFromRow(row: Row): DepositEvent {
+  return {
+    id: str(row.id),
+    kind: row.kind === "forfeited" ? "forfeited" : "refunded",
+    amountCents: int(row.amount_cents),
+    createdAt: str(row.created_at),
+  };
 }
 
 /** `clients(name, email, phone)` and `staff(name)` may be embedded. */
@@ -331,6 +347,7 @@ export function appointmentFromRow(row: Row): Appointment {
     discountCents: int(row.discount_cents),
     refundCents: int(row.refund_cents),
     refundedAt: strOrNull(row.refunded_at),
+    depositEvents: embeddedArray(row.appointment_deposit_events).map(depositEventFromRow),
     client: client ? { name: str(client.name), email: str(client.email), phone: str(client.phone) } : null,
     staffName: staff ? str(staff.name) : null,
   };

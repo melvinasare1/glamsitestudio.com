@@ -119,6 +119,12 @@ export function AppointmentsBoard(props: Props) {
       if (!window.confirm(`Cancel ${who}'s ${item.serviceName}?${note}`)) return;
     }
     run(() => setAppointmentStatus(item.id, status), message);
+    if (status === "no_show" && item.depositCents > 0 && item.depositStatus === "paid") {
+      const who = item.client?.name ?? "this client";
+      if (window.confirm(`Also keep ${who}'s deposit, since they didn't show up?`)) {
+        run(() => forfeitDeposit(item.id), "Deposit kept");
+      }
+    }
   }
 
   return (
@@ -311,10 +317,11 @@ function AppointmentSheet({
   useEffect(() => setNotes(appointment?.internalNotes ?? ""), [appointment?.id, appointment?.internalNotes]);
   useEffect(() => {
     setRefunding(false);
-    setRefundAmount(appointment ? (appointment.depositCents / 100).toFixed(2) : "");
+    setRefundAmount(appointment ? ((appointment.depositCents - appointment.refundCents) / 100).toFixed(2) : "");
   }, [appointment?.id]);
 
   const started = appointment ? new Date(appointment.startsAt).getTime() <= Date.now() : false;
+  const remainingToRefund = appointment ? appointment.depositCents - appointment.refundCents : 0;
   const day = appointment ? zonedParts(new Date(appointment.startsAt), timeZone).ymd : "";
 
   return (
@@ -365,6 +372,22 @@ function AppointmentSheet({
                 <Detail label="Booked">{appointment.source === "online" ? "Online by the client" : "Added by you"}</Detail>
               </dl>
 
+              {appointment.depositEvents.length > 0 ? (
+                <div className="grid gap-1.5 text-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Deposit history</p>
+                  <ul className="grid gap-1">
+                    {appointment.depositEvents.map((event) => (
+                      <li key={event.id} className="flex items-center justify-between gap-3 text-muted-foreground">
+                        <span>
+                          {event.kind === "refunded" ? "Refunded" : "Kept"} {formatMoney(event.amountCents, appointment.currency)}
+                        </span>
+                        <span>{formatDayShort(zonedParts(new Date(event.createdAt), timeZone).ymd)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {appointment.client ? (
                 <div className="grid gap-2 text-sm">
                   {appointment.client.phone ? (
@@ -410,32 +433,28 @@ function AppointmentSheet({
                     <Field
                       id="refund-amount"
                       label="Amount to refund"
-                      description={`Up to ${formatMoney(appointment.depositCents, appointment.currency)}. Enter less for a partial refund.`}
+                      description={`Up to ${formatMoney(remainingToRefund, appointment.currency)} left. Enter less for a partial refund.`}
                     >
                       <Input
                         id="refund-amount"
                         type="number"
                         inputMode="decimal"
                         min="0"
-                        max={(appointment.depositCents / 100).toFixed(2)}
+                        max={(remainingToRefund / 100).toFixed(2)}
                         step="0.01"
                         value={refundAmount}
                         onChange={(event) => setRefundAmount(event.target.value)}
                       />
                     </Field>
-                    {Number(refundAmount) * 100 > appointment.depositCents ? (
+                    {Number(refundAmount) * 100 > remainingToRefund ? (
                       <p className="text-sm text-destructive">
-                        That's more than the {formatMoney(appointment.depositCents, appointment.currency)} deposit paid.
+                        That's more than the {formatMoney(remainingToRefund, appointment.currency)} left to refund.
                       </p>
                     ) : null}
                     <div className="flex gap-2">
                       <Button
                         size="lg"
-                        disabled={
-                          saving ||
-                          !(Number(refundAmount) > 0) ||
-                          Math.round(Number(refundAmount) * 100) > appointment.depositCents
-                        }
+                        disabled={saving || !(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > remainingToRefund}
                         onClick={() => onRefundDeposit(appointment, Math.round(Number(refundAmount) * 100))}
                       >
                         Confirm refund
@@ -448,14 +467,16 @@ function AppointmentSheet({
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button size="lg" variant="outline" disabled={saving} onClick={() => setRefunding(true)}>
-                      Refund deposit
+                      {appointment.refundCents > 0 ? "Refund more" : "Refund deposit"}
                     </Button>
                     <Button
                       size="lg"
                       variant="outline"
                       disabled={saving}
                       onClick={() => {
-                        if (window.confirm(`Keep ${appointment.client?.name ?? "this client"}'s deposit? This can't be undone.`)) {
+                        const who = appointment.client?.name ?? "this client";
+                        const amount = formatMoney(remainingToRefund, appointment.currency);
+                        if (window.confirm(`Keep ${who}'s remaining ${amount} deposit? This can't be undone.`)) {
                           onForfeitDeposit(appointment);
                         }
                       }}

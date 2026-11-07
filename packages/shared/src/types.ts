@@ -219,12 +219,22 @@ export type PlatformReferralEarning = {
   createdAt: string;
 };
 
-/** Where staff send a referrer's commission. Plain bank details, not Stripe -- this is platform revenue share, not a salon's own booking payment. */
+/** How a referrer wants their commission paid. Covers the UK (bank_uk), US (zelle, cashapp, paypal), Canada (interac) and Europe (iban). */
+export type PlatformReferralPayoutMethod = "bank_uk" | "iban" | "zelle" | "cashapp" | "paypal" | "interac";
+
+/**
+ * Where staff send a referrer's commission. Plain payout details, not
+ * Stripe -- this is platform revenue share, not a salon's own booking
+ * payment. `identifier`/`identifier2` hold whatever that method needs (see
+ * PLATFORM_REFERRAL_PAYOUT_METHOD_FIELDS); identifier2 is blank except for
+ * bank_uk (sort code) and iban (BIC/SWIFT).
+ */
 export type PlatformReferralPayoutDetails = {
   businessId: string;
+  method: PlatformReferralPayoutMethod;
   accountName: string;
-  accountNumber: string;
-  sortCode: string;
+  identifier: string;
+  identifier2: string;
   notes: string;
   updatedAt: string;
 };
@@ -257,6 +267,14 @@ export type SiteData = {
 export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled" | "no_show" | "late";
 export type DepositStatus = "none" | "pending" | "paid" | "refunded" | "forfeited";
 
+/** One entry in an appointment's deposit history: a partial/full refund, or a forfeit. */
+export type DepositEvent = {
+  id: string;
+  kind: "refunded" | "forfeited";
+  amountCents: number;
+  createdAt: string;
+};
+
 export type Appointment = {
   id: string;
   businessId: string;
@@ -286,9 +304,12 @@ export type Appointment = {
   discountCode: string | null;
   /** How much was taken off because of discountCode. 0 when discountCode is null. */
   discountCents: number;
-  /** What was actually given back to the client. Recorded by the owner, not fetched from Stripe. 0 means no refund. */
+  /** Total given back across every refund so far (there can be several partial ones). 0 means no refund. */
   refundCents: number;
+  /** When the most recent refund happened. */
   refundedAt: string | null;
+  /** Every refund/forfeit on this appointment's deposit, oldest first. Embedded when the query selects `appointment_deposit_events(...)`. */
+  depositEvents: DepositEvent[];
   /** Embedded when the query selects `clients(name, email, phone)`. */
   client: { name: string; email: string; phone: string } | null;
   /** Embedded when the query selects `staff(name)`. */
