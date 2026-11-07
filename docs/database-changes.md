@@ -35,6 +35,39 @@ session has already applied the change.
 
 ---
 
+## 7 Nov 2026 · `20261109000000_platform_referrals`
+
+**What:** adds three new tables for the "Earn" business-to-business referral
+program: `platform_referrals`, `platform_referral_earnings`,
+`platform_referral_payout_details`, with RLS policies scoping owners to their
+own rows (insert/select only; staff/service-role does everything else).
+Nothing existing is dropped or rewritten.
+
+**File:** `supabase/migrations/20261109000000_platform_referrals.sql`.
+**Undo:** `supabase/rollbacks/20261109000000_platform_referrals.down.sql`
+(written alongside this log entry — missing when the feature first merged).
+Drops all three tables; turn off the owner-facing Earn page and admin Earn
+pipeline first, since both read/write them.
+
+| | Staging `idlqgpervgglazzozhkb` | Production `ufrfhimjmvltpdtcoord` |
+| --- | --- | --- |
+| Before | Migration file existed in the repo (merged with the Earn feature) but was never applied; checked via `list_migrations` and `information_schema.tables` — no `platform_referral*` tables present | Not checked/applied in this session |
+| Applied | 10:59:35 UTC, history version `20261107105935`, by Claude through the Supabase connection | Not applied yet |
+| Name in history | `20261109000000_platform_referrals` | — |
+| Verified | `select count(*) from platform_referrals` succeeds (0 rows) | — |
+| Security advisor | Clean for the new tables (only pre-existing, unrelated findings: `leads` and `rate_limits` RLS-enabled-no-policy, and leaked-password-protection) | — |
+
+**Why this happened:** the Earn feature's migration file was committed but
+the apply step was missed, so the owner-facing referral form failed on every
+submit with a generic "something went wrong" error until this was caught and
+fixed.
+
+**Still open:** production needs the same migration before Earn ships live
+there — not done in this session, since it wasn't needed to fix the staging
+bug being debugged.
+
+---
+
 ## 2 Nov 2026 · `20261102090000_booking_core`
 
 **What:** adds `appointments.cancelled_by` (`client` or `business`, nullable)
