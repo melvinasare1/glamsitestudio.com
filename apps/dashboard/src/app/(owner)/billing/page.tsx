@@ -2,6 +2,7 @@ import { BOOKING_ADDON_PRICE_CENTS, EMAIL_QUOTA_BY_TIER, HOSTING_TIER_LABEL, has
 import { formatMoney } from "@glamsite/shared/format";
 import { PageBody, PageHeader, Panel } from "@/components/page";
 import { getDashboardSession } from "@/lib/business";
+import { refreshConnectStatus } from "./actions";
 import { BookingAddonButton } from "./booking-addon-button";
 import { ConnectStripeButton } from "./connect-stripe-button";
 import { EmailCampaignsPanel } from "./email-campaigns-panel";
@@ -23,6 +24,10 @@ const STATUS: Record<string, string> = {
 };
 
 export default async function BillingPage() {
+  // Re-checks a pending Connect account straight with Stripe before reading
+  // the session, instead of trusting the account.updated webhook to have
+  // landed by now (see refreshConnectStatus's own comment for why).
+  await refreshConnectStatus();
   const session = await getDashboardSession();
   const billing = session?.billing;
   const hostingTier = billing?.hostingTier ?? "basic";

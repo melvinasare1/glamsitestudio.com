@@ -358,3 +358,42 @@ export async function startConnectOnboarding(): Promise<PortalResult> {
     return { ok: false, error: stripeErrorMessage(error, "Couldn't start Stripe onboarding. Try again.") };
   }
 }
+
+/**
+ * Re-checks a pending Connect account directly with Stripe, rather than
+ * relying only on the `account.updated` webhook — which needs "Listen to
+ * events on connected accounts" enabled on the endpoint (see
+ * docs/infrastructure.md) and, in local dev, `stripe listen
+ * --forward-connect-to`. Easy to miss either, and without it
+ * `stripe_connect_charges_enabled` gets stuck false even after the owner
+ * finishes onboarding. Cheap to call on every billing page view: it's a
+ * no-op once an account has no id, or already reads as enabled.
+ */
+export async function refreshConnectStatus(): Promise<void> {
+  const ctx = await ownerContext();
+  if (!ctx.ok) return;
+
+  const { data: billingRow } = await ctx.supabase
+    .from("business_billing")
+    .select("stripe_connect_account_id, stripe_connect_charges_enabled")
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  const accountId = billingRow?.stripe_connect_account_id as string | null;
+  if (!accountId || billingRow?.stripe_connect_charges_enabled) return;
+
+  try {
+    // The classic v1 Accounts API still reflects the same underlying
+    // account even though startConnectOnboarding creates it via v2, and its
+    // flat `charges_enabled` matches exactly what the webhook stores.
+    const account = await getStripe().accounts.retrieve(accountId);
+    if (account.charges_enabled === billingRow?.stripe_connect_charges_enabled) return;
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("business_billing")
+      .update({ stripe_connect_charges_enabled: account.charges_enabled })
+      .eq("business_id", ctx.business.id);
+    if (error) console.error("[dashboard] save refreshed Connect status", error);
+  } catch (error) {
+    console.error("[dashboard] refresh Connect status failed", error);
+  }
+}
