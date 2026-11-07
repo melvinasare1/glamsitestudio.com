@@ -4,7 +4,7 @@ import { Phone, ArrowUpRight } from "lucide-react";
 import { sitePath } from "@glamsite/shared/domain";
 import { sectionText } from "@glamsite/shared/site-content";
 import { BookingFlow } from "@/components/booking/BookingFlow";
-import { BookingFrame, BookingNotice, NoticeButton, NoticeLinkButton } from "@/components/booking/BookingFrame";
+import { BookingFrame, BookingNotice, NoticeButton, NoticeDivider } from "@/components/booking/BookingFrame";
 import { loadBookingSite } from "@/lib/booking";
 import { bookingHref, siteTitle } from "@/templates/shared";
 
@@ -40,10 +40,21 @@ export default async function BookPage({ params, searchParams }: Props) {
           title="Online booking isn't available here"
           actions={
             elsewhere.startsWith("http") ? (
-              <NoticeLinkButton href={elsewhere}>
-                Book with {business.name} here
-                <ArrowUpRight className="size-4" aria-hidden />
-              </NoticeLinkButton>
+              <>
+                <NoticeButton href={elsewhere}>
+                  Book via our booking partner
+                  <ArrowUpRight className="size-4" aria-hidden />
+                </NoticeButton>
+                {business.phone ? (
+                  <>
+                    <NoticeDivider />
+                    <NoticeButton href={`tel:${business.phone}`}>
+                      <Phone className="size-4" aria-hidden />
+                      Call {business.phone}
+                    </NoticeButton>
+                  </>
+                ) : null}
+              </>
             ) : business.phone ? (
               <NoticeButton href={`tel:${business.phone}`}>
                 <Phone className="size-4" aria-hidden />

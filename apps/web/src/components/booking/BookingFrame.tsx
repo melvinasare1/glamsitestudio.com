@@ -59,36 +59,34 @@ export function BookingNotice({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-lg py-20 text-center">
-      <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-[#F3F1EE]" aria-hidden>
-        <Calendar className="size-[26px] text-[#77716B]" />
+    <div className="mx-auto max-w-md rounded-2xl border border-[#E8E6E3] bg-white p-10 text-center">
+      <span className="mx-auto flex size-14 items-center justify-center rounded-xl bg-[#F7F6F4]" aria-hidden>
+        <Calendar className="size-6 text-[#8A8580]" />
       </span>
-      <h1 className="mt-7 font-[family-name:var(--font-heading)] text-3xl md:text-4xl">{title}</h1>
-      {children ? <p className="mx-auto mt-4 max-w-sm text-sm leading-7 text-[#77716B]">{children}</p> : null}
-      {actions ? <div className="mx-auto mt-8 flex max-w-sm flex-col gap-3">{actions}</div> : null}
+      <h1 className="mt-6 text-xl font-semibold">{title}</h1>
+      {children ? <p className="mx-auto mt-2.5 text-sm leading-6 text-[#8A8580]">{children}</p> : null}
+      {actions ? <div className="mx-auto mt-7 flex max-w-xs flex-col items-stretch gap-3">{actions}</div> : null}
     </div>
   );
 }
 
-export function NoticeButton({ href, children }: { href: string; children: React.ReactNode }) {
+/** A plain-text "or" between two notice actions. */
+export function NoticeDivider() {
   return (
-    <a
-      href={href}
-      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-5 text-sm font-semibold text-[var(--brand-ink)] hover:opacity-90"
-    >
-      {children}
-    </a>
+    <span className="text-xs" style={{ color: "#B9B4AE" }}>
+      or
+    </span>
   );
 }
 
-export function NoticeLinkButton({ href, children }: { href: string; children: React.ReactNode }) {
+export function NoticeButton({ href, children }: { href: string; children: React.ReactNode }) {
   const external = href.startsWith("http");
   return (
     <a
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-[#EAE8E5] bg-white px-5 text-sm font-medium hover:bg-[#FAF9F7]"
+      className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-[#E8E6E3] bg-white px-5 text-sm font-medium hover:bg-[#F7F6F4]"
     >
       {children}
     </a>

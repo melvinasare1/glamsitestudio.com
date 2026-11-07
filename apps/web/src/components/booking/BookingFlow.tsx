@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
-  Calendar,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
+  AlertTriangle,
   ArrowRight,
   ArrowUpRight,
+  Calendar,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
-  Lock,
+  Tag,
+  User,
   Users,
 } from "lucide-react";
 import Image from "next/image";
@@ -57,10 +58,10 @@ type Props = {
 const PAGE_DAYS = 28;
 
 /** Shared neutral tokens: only --brand/--accent (and their -ink pairs) flex per business. */
-const BORDER = "#EAE8E5";
-const MUTED = "#85817D";
-const SECONDARY = "#625E5A";
-const INK = "#252321";
+const BORDER = "#E8E6E3";
+const MUTED = "#8A8580";
+const SECONDARY = "#5E5954";
+const SURFACE = "#F7F6F4";
 
 type Details = {
   name: string;
@@ -73,7 +74,8 @@ type Details = {
 };
 
 type Done = { token: string; status: "pending" | "confirmed"; slot: SlotOption; serviceId: string; staffName: string | null };
-type StepState = "complete" | "active" | "upcoming";
+type StepKey = "service" | "staff" | "time" | "details";
+const STEP_LABEL: Record<StepKey, string> = { service: "Service", staff: "Staff", time: "Time", details: "Details" };
 
 function partOfDay(time: string): "Morning" | "Afternoon" | "Evening" {
   const hour = Number(time.slice(0, 2));
@@ -128,8 +130,33 @@ export function BookingFlow(props: Props) {
     depositCents == null
       ? null
       : props.paymentPolicy === "full"
-        ? `Full payment of ${formatMoney(depositCents, currency)} is required. ${props.businessName} will contact you to arrange payment.`
-        : `A ${formatMoney(depositCents, currency)} deposit is required. ${props.businessName} will contact you to collect it.`;
+        ? `Full payment of ${formatMoney(depositCents, currency)} is required to secure your booking.`
+        : `A ${formatMoney(depositCents, currency)} deposit is required to secure your booking.`;
+
+  // Before a service is chosen we don't yet know whether it needs a staff step, so the
+  // tracker assumes one (the common case) until the real answer narrows it.
+  const stepDefs = useMemo<{ key: StepKey; label: string }[]>(() => {
+    const defs: { key: StepKey; label: string }[] = [{ key: "service", label: STEP_LABEL.service }];
+    if (!service || askStaff) defs.push({ key: "staff", label: STEP_LABEL.staff });
+    defs.push({ key: "time", label: STEP_LABEL.time }, { key: "details", label: STEP_LABEL.details });
+    return defs;
+  }, [service, askStaff]);
+
+  const [activeKey, setActiveKey] = useState<StepKey>("service");
+  const activeIndex = stepDefs.findIndex((s) => s.key === activeKey);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  function goTo(key: StepKey) {
+    setActiveKey(key);
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function goNext() {
+    const next = stepDefs[stepDefs.findIndex((s) => s.key === activeKey) + 1];
+    if (next) goTo(next.key);
+  }
+
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [range, setRange] = useState<{ first: string; loadedTo: string; last: string } | null>(null);
@@ -137,7 +164,7 @@ export function BookingFlow(props: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<SlotOption | null>(null);
-  /** The first day of the 7-day window shown in step 3. */
+  /** The first day of the 7-day window shown in the time step. */
   const [weekStart, setWeekStart] = useState<string | null>(null);
 
   const [details, setDetails] = useState<Details>({
@@ -154,17 +181,6 @@ export function BookingFlow(props: Props) {
   const [done, setDone] = useState<Done | null>(null);
 
   const requestId = useRef(0);
-  const stepRefs = useRef<Record<number, HTMLElement | null>>({});
-
-  // Internal phase, independent of display numbering: 1 service, 2 staff (only when
-  // askStaff), 3 time, 4 details. Renumbered display labels below just skip 2 when
-  // there's no staff step — comparisons always use these fixed phase numbers.
-  const PHASE_TIME = 3;
-  const PHASE_DETAILS = 4;
-  const step = !service ? 1 : askStaff && !staffChoice ? 2 : !slot ? PHASE_TIME : PHASE_DETAILS;
-  const staffStepN = 2;
-  const timeStepN = askStaff ? 3 : 2;
-  const detailsStepN = askStaff ? 4 : 3;
 
   // Keep an invalid pre-selected person (from a link) from sticking when the service changes.
   useEffect(() => {
@@ -224,15 +240,6 @@ export function BookingFlow(props: Props) {
   useEffect(() => {
     if (range && weekStart === null) setWeekStart(range.first);
   }, [range, weekStart]);
-
-  // Bring the step the client is on into view on small screens.
-  useEffect(() => {
-    if (done) return;
-    const el = stepRefs.current[step];
-    if (el && window.matchMedia("(max-width: 1023px)").matches && step > 1) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [step, done]);
 
   const weekDays = useMemo(
     () => (weekStart ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) : []),
@@ -331,46 +338,36 @@ export function BookingFlow(props: Props) {
     const manageHref = `${props.manageBase}${done.token}`;
     const manageUrl = typeof window === "undefined" ? manageHref : new URL(manageHref, window.location.origin).toString();
     return (
-      <section className="mx-auto max-w-xl py-8 md:py-16" aria-live="polite">
+      <section className="mx-auto max-w-xl rounded-2xl border bg-white p-8 sm:p-10" style={{ borderColor: BORDER }} aria-live="polite">
         <div className="text-center">
-          <span
-            className="mx-auto flex size-[76px] items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)]"
-            aria-hidden
-          >
-            <Check className="size-9" strokeWidth={1.8} />
+          <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)]" aria-hidden>
+            <Check className="size-8" strokeWidth={2} />
           </span>
-          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: MUTED }}>
-            {done.status === "confirmed" ? "Appointment confirmed" : "Booking request"}
-          </p>
-          <h1 className="mt-2 font-[family-name:var(--font-heading)] text-4xl leading-tight md:text-5xl">
-            {done.status === "confirmed" ? "You're booked in." : "Request sent."}
+          <h1 className="mt-5 font-[family-name:var(--font-heading)] text-3xl leading-tight">
+            {done.status === "confirmed" ? "You're booked in!" : "Request sent!"}
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7" style={{ color: SECONDARY }}>
+          <p className="mt-2 text-sm" style={{ color: SECONDARY }}>
             {done.status === "confirmed"
-              ? `We've emailed your confirmation to ${details.email}.`
+              ? `We've sent a confirmation to ${details.email}.`
               : `${props.businessName} will confirm your appointment shortly. We'll email ${details.email} when they do.`}
           </p>
         </div>
 
-        <div className="mt-10 overflow-hidden rounded-2xl border" style={{ borderColor: BORDER }}>
-          <div className="border-b px-6 py-4" style={{ borderColor: BORDER, backgroundColor: "#FAF9F7" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: MUTED }}>
-              Appointment details
-            </p>
-          </div>
-          <dl className="divide-y px-6" style={{ borderColor: BORDER }}>
-            <Row label="When">
-              {formatDayLong(done.slot.date)}, {formatTime(done.slot.time)}
-            </Row>
-            <Row label="Service">
-              {bookedService.name} · {formatDuration(bookedService.durationMinutes)}
-            </Row>
-            {done.staffName ? <Row label="With">{done.staffName}</Row> : null}
-            <Row label="Price">{formatServicePrice(bookedService, currency)}</Row>
-          </dl>
-        </div>
+        <dl className="mt-7 grid gap-4 rounded-xl p-5" style={{ backgroundColor: SURFACE }}>
+          <SummaryRow icon={Calendar}>
+            {formatDayLong(done.slot.date)} at {formatTime(done.slot.time)}
+          </SummaryRow>
+          <SummaryRow icon={Tag}>
+            {bookedService.name} · {formatDuration(bookedService.durationMinutes)}
+          </SummaryRow>
+          {done.staffName ? <SummaryRow icon={User}>With {done.staffName}</SummaryRow> : null}
+          <SummaryRow icon={Tag}>
+            {formatServicePrice(bookedService, currency)}
+            {paymentNotice ? ` (${formatMoney(depositCents ?? 0, currency)} ${props.paymentPolicy === "full" ? "paid" : "deposit paid"})` : null}
+          </SummaryRow>
+        </dl>
 
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-2.5">
           <a
             href={icsHref(
               `${bookedService.name} at ${props.businessName}`,
@@ -380,137 +377,171 @@ export function BookingFlow(props: Props) {
               manageUrl
             )}
             download="appointment.ics"
-            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-5 text-sm font-semibold text-[var(--brand-ink)] hover:opacity-90"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-[#FAF9F7]"
+            style={{ borderColor: BORDER }}
           >
             <Calendar className="size-4" aria-hidden />
             Add to calendar
           </a>
           <a
             href={manageHref}
-            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border px-5 text-sm font-medium hover:bg-[#FAF9F7]"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-[#FAF9F7]"
             style={{ borderColor: BORDER }}
           >
-            View or manage appointment
-            <ArrowUpRight className="size-4" aria-hidden />
+            View or cancel appointment
           </a>
-          <a href={props.homeHref} className="flex min-h-11 w-full items-center justify-center text-sm" style={{ color: SECONDARY }}>
-            Back to {props.businessName}
+          <a
+            href={props.homeHref}
+            className="flex min-h-[44px] w-full items-center justify-center rounded-xl text-sm font-medium"
+            style={{ color: SECONDARY }}
+          >
+            Back to website
           </a>
         </div>
       </section>
     );
   }
 
-  const groups = groupServices(props.categories, services);
+  const allGroups = groupServices(props.categories, services);
+  const visibleGroups = categoryFilter === "all" ? allGroups : allGroups.filter((g) => g.category?.id === categoryFilter);
+  const categoryTabs = allGroups.map((g) => g.category).filter((c): c is ServiceCategory => c !== null);
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
-      <div className="min-w-0">
-        <h1 className="font-[family-name:var(--font-heading)] text-4xl leading-tight md:text-5xl">{props.bookingHeading}</h1>
-        <p className="mt-2 text-sm" style={{ color: MUTED }}>
-          Choose your service, find a time and you&apos;re all set.
-        </p>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+      <div className="rounded-2xl border bg-white p-5 sm:p-8" style={{ borderColor: BORDER }} ref={panelRef}>
+        {/* Header: heading + step tracker */}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-b pb-6" style={{ borderColor: BORDER }}>
+          <h1 className="font-[family-name:var(--font-heading)] text-2xl font-semibold">{props.bookingHeading}</h1>
+          <ol className="flex items-center gap-1.5 overflow-x-auto sm:gap-2.5" aria-label="Booking steps">
+            {stepDefs.map((s, i) => (
+              <li key={s.key} className="flex items-center gap-1.5 sm:gap-2.5">
+                <button
+                  type="button"
+                  disabled={i > activeIndex}
+                  onClick={() => goTo(s.key)}
+                  className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs font-medium transition disabled:cursor-not-allowed"
+                  style={
+                    i === activeIndex
+                      ? { backgroundColor: "var(--brand)", color: "var(--brand-ink)" }
+                      : i < activeIndex
+                        ? { color: SECONDARY }
+                        : { color: "#B9B4AE" }
+                  }
+                >
+                  <span
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={
+                      i === activeIndex
+                        ? { backgroundColor: "var(--brand-ink)", color: "var(--brand)" }
+                        : i < activeIndex
+                          ? { backgroundColor: "var(--accent)", color: "var(--accent-ink)" }
+                          : { border: "1px solid #E0DCD7" }
+                    }
+                  >
+                    {i < activeIndex ? <Check className="size-3.5" aria-hidden /> : i + 1}
+                  </span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </button>
+                {i < stepDefs.length - 1 ? <span className="h-px w-3 shrink-0" style={{ backgroundColor: "#E0DCD7" }} aria-hidden /> : null}
+              </li>
+            ))}
+          </ol>
+        </div>
 
-        <div className="mt-9">
-          {/* 1. Service */}
-          <StepRail
-            number={1}
-            title="Choose a service"
-            state={step === 1 ? "active" : "complete"}
-            summary={service ? `${service.name} · ${formatDuration(service.durationMinutes)} · ${formatServicePrice(service, currency)}` : undefined}
-            onChange={() => {
-              setServiceId(null);
-              setStaffChoice(null);
-            }}
-            refCallback={(el) => (stepRefs.current[1] = el)}
-          >
-            <div className="grid gap-6">
-              {groups.map((group) => (
-                <div key={group.category?.id ?? "other"}>
-                  {groups.length > 1 ? (
-                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: MUTED }}>
-                      {group.category?.name ?? "Other services"}
-                    </h3>
-                  ) : null}
-                  <div className="grid gap-3">
-                    {group.services.map((item) => {
-                      const selected = item.id === serviceId;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setServiceId(item.id);
-                            setStaffChoice(null);
-                            track("booking_started", { slug: props.slug, serviceId: item.id });
-                          }}
-                          className="flex w-full items-center gap-4 rounded-xl border p-3.5 text-left transition sm:p-4"
-                          style={{
-                            borderColor: selected ? "var(--brand)" : BORDER,
-                            backgroundColor: selected ? "var(--accent)" : "#fff",
-                          }}
-                        >
-                          {item.imageUrl ? (
-                            <Image src={item.imageUrl} alt="" width={72} height={72} className="size-[72px] shrink-0 rounded-lg object-cover" />
-                          ) : (
-                            <span className="flex size-[72px] shrink-0 items-center justify-center rounded-lg bg-[#F4F2EF] font-[family-name:var(--font-heading)] text-lg" style={{ color: MUTED }}>
-                              {item.name.charAt(0)}
-                            </span>
-                          )}
-                          <span className="min-w-0 flex-1">
-                            <span className="block font-medium">{item.name}</span>
-                            <span className="mt-1 block text-xs" style={{ color: MUTED }}>
-                              {formatDuration(item.durationMinutes)}
-                            </span>
-                            {item.description ? (
-                              <span className="mt-1.5 block max-w-prose text-sm leading-5" style={{ color: MUTED }}>
-                                {item.description}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="flex shrink-0 flex-col items-end gap-3">
-                            <span className="font-tabular block text-sm font-semibold">{formatServicePrice(item, currency)}</span>
-                            <span
-                              className="flex size-6 items-center justify-center rounded-full border"
-                              style={{
-                                borderColor: selected ? "var(--brand)" : "#DAD6D1",
-                                backgroundColor: selected ? "var(--brand)" : "#fff",
-                                color: selected ? "var(--brand-ink)" : "transparent",
-                              }}
-                              aria-hidden
-                            >
-                              <Check className="size-3.5" />
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+        {/* Panel content */}
+        <div className="pt-6">
+          {activeKey === "service" ? (
+            <div>
+              <h2 className="text-lg font-semibold">Choose a service</h2>
+
+              {categoryTabs.length > 1 ? (
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                  <CategoryTab label="All services" active={categoryFilter === "all"} onClick={() => setCategoryFilter("all")} />
+                  {categoryTabs.map((cat) => (
+                    <CategoryTab key={cat.id} label={cat.name} active={categoryFilter === cat.id} onClick={() => setCategoryFilter(cat.id)} />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </StepRail>
+              ) : null}
 
-          {/* 2. Who */}
-          {service && askStaff ? (
-            <StepRail
-              number={staffStepN}
-              title="Who would you like to see?"
-              state={step < staffStepN ? "upcoming" : step === staffStepN ? "active" : "complete"}
-              summary={staffChoice === "any" ? "Anyone available" : chosenPerson?.name}
-              onChange={() => setStaffChoice(null)}
-              refCallback={(el) => (stepRefs.current[2] = el)}
-            >
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <PersonCard
+              <div className="mt-5 grid gap-6">
+                {visibleGroups.map((group) => (
+                  <div key={group.category?.id ?? "other"}>
+                    {categoryFilter === "all" && visibleGroups.length > 1 ? (
+                      <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: MUTED }}>
+                        {group.category?.name ?? "Other services"}
+                      </h3>
+                    ) : null}
+                    <div className="grid gap-3">
+                      {group.services.map((item) => {
+                        const selected = item.id === serviceId;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setServiceId(item.id);
+                              setStaffChoice(null);
+                              track("booking_started", { slug: props.slug, serviceId: item.id });
+                            }}
+                            className="flex w-full items-center gap-4 rounded-xl border p-3.5 text-left transition sm:p-4"
+                            style={{ borderColor: selected ? "var(--brand)" : BORDER, backgroundColor: selected ? "var(--accent)" : "#fff" }}
+                          >
+                            {item.imageUrl ? (
+                              <Image src={item.imageUrl} alt="" width={64} height={64} className="size-16 shrink-0 rounded-lg object-cover" />
+                            ) : (
+                              <span
+                                className="flex size-16 shrink-0 items-center justify-center rounded-lg font-[family-name:var(--font-heading)] text-lg"
+                                style={{ backgroundColor: SURFACE, color: MUTED }}
+                              >
+                                {item.name.charAt(0)}
+                              </span>
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block font-medium">{item.name}</span>
+                              {item.description ? (
+                                <span className="mt-0.5 block max-w-prose truncate text-sm" style={{ color: MUTED }}>
+                                  {item.description}
+                                </span>
+                              ) : null}
+                              <span className="mt-1 block text-xs" style={{ color: MUTED }}>
+                                {formatDuration(item.durationMinutes)}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 flex-col items-end gap-3">
+                              <span className="font-tabular block text-sm font-semibold">{formatServicePrice(item, currency)}</span>
+                              <span
+                                className="flex size-5 shrink-0 items-center justify-center rounded-full border-2"
+                                style={{ borderColor: selected ? "var(--brand)" : "#D6D1CB" }}
+                                aria-hidden
+                              >
+                                {selected ? <span className="size-2.5 rounded-full" style={{ backgroundColor: "var(--brand)" }} /> : null}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <PanelAction disabled={!service} onClick={goNext} />
+            </div>
+          ) : null}
+
+          {activeKey === "staff" ? (
+            <div>
+              <h2 className="text-lg font-semibold">Who would you like to see?</h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <PersonRow
                   name="Anyone available"
-                  detail="Shows the most times"
+                  detail="Shows the most available times"
                   selected={staffChoice === "any"}
                   onClick={() => setStaffChoice("any")}
                   anyone
                 />
                 {team.map((person) => (
-                  <PersonCard
+                  <PersonRow
                     key={person.id}
                     name={person.name}
                     detail={person.role}
@@ -520,22 +551,17 @@ export function BookingFlow(props: Props) {
                   />
                 ))}
               </div>
-            </StepRail>
+              <PanelAction disabled={!staffChoice} onClick={goNext} />
+            </div>
           ) : null}
 
-          {/* 3. Time */}
-          {service ? (
-            <StepRail
-              number={timeStepN}
-              title="Pick a time"
-              state={step < PHASE_TIME ? "upcoming" : step === PHASE_TIME ? "active" : "complete"}
-              summary={slot ? `${formatDayLong(slot.date)}, ${formatTime(slot.time)}` : undefined}
-              onChange={() => setSlot(null)}
-              refCallback={(el) => (stepRefs.current[3] = el)}
-            >
-              {loadError ? <p className="mb-4 rounded-lg bg-[#FBF3F1] px-4 py-3 text-sm text-[#9b1c1c]">{loadError}</p> : null}
+          {activeKey === "time" ? (
+            <div>
+              <h2 className="text-lg font-semibold">Pick a time</h2>
+
+              {loadError ? <p className="mb-4 mt-4 rounded-lg bg-[#FBF3F1] px-4 py-3 text-sm text-[#9b1c1c]">{loadError}</p> : null}
               {!range && loading ? (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl" style={{ backgroundColor: "#FAF9F7" }} role="status" aria-live="polite">
+                <div className="mt-5 flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl" style={{ backgroundColor: SURFACE }} role="status" aria-live="polite">
                   <Loader2 className="size-6 animate-spin" style={{ color: "var(--brand)" }} aria-hidden />
                   <p className="text-sm" style={{ color: SECONDARY }}>
                     Finding available times…
@@ -544,7 +570,7 @@ export function BookingFlow(props: Props) {
               ) : null}
               {range ? (
                 <>
-                  <div className="flex items-center gap-2 pb-3">
+                  <div className="mt-5 flex items-center gap-2">
                     <button
                       type="button"
                       aria-label="Previous week"
@@ -574,12 +600,12 @@ export function BookingFlow(props: Props) {
                               selected
                                 ? { borderColor: "var(--brand)", backgroundColor: "var(--brand)", color: "var(--brand-ink)" }
                                 : open
-                                  ? { borderColor: BORDER, color: INK }
-                                  : { borderColor: "#F0EEEB", backgroundColor: "#F8F7F5", color: "#C5C0BA", textDecoration: "line-through" }
+                                  ? { borderColor: BORDER }
+                                  : { borderColor: "#F0EEEB", backgroundColor: SURFACE, color: "#C5C0BA", textDecoration: "line-through" }
                             }
                           >
                             <span className="text-[10px] tracking-wide">{formatDayShort(d).split(" ")[0]}</span>
-                            <span className="font-tabular text-lg font-semibold leading-tight">{Number(dd)}</span>
+                            <span className="font-tabular text-sm font-semibold leading-tight">{Number(dd)}</span>
                           </button>
                         );
                       })}
@@ -598,79 +624,71 @@ export function BookingFlow(props: Props) {
 
                   {day ? (
                     <div className="mt-5">
-                      <h3 className="font-[family-name:var(--font-heading)] text-xl">{formatDayLong(day)}</h3>
                       {(["Morning", "Afternoon", "Evening"] as const).map((part) => {
                         const times = daySlots.filter((item) => partOfDay(item.time) === part);
                         if (!times.length) return null;
                         return (
-                          <div key={part} className="mt-5">
-                            <p className="mb-2.5 text-sm font-medium" style={{ color: INK }}>
-                              {part}
-                            </p>
+                          <div key={part} className="mt-5 first:mt-0">
+                            <p className="mb-2.5 text-sm font-medium">{part}</p>
                             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                              {times.map((item) => (
-                                <button
-                                  key={item.startsAt}
-                                  type="button"
-                                  onClick={() => {
-                                    setSlot(item);
-                                    setLoadError(null);
-                                  }}
-                                  className="font-tabular rounded-lg border py-2.5 text-sm font-medium transition hover:border-[var(--brand)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
-                                  style={{ borderColor: BORDER }}
-                                >
-                                  {formatTime(item.time)}
-                                </button>
-                              ))}
+                              {times.map((item) => {
+                                const selected = slot?.startsAt === item.startsAt;
+                                return (
+                                  <button
+                                    key={item.startsAt}
+                                    type="button"
+                                    onClick={() => {
+                                      setSlot(item);
+                                      setLoadError(null);
+                                    }}
+                                    className="font-tabular rounded-lg border py-2.5 text-sm font-medium transition"
+                                    style={
+                                      selected
+                                        ? { borderColor: "var(--brand)", backgroundColor: "var(--brand)", color: "var(--brand-ink)" }
+                                        : { borderColor: BORDER }
+                                    }
+                                  >
+                                    {formatTime(item.time)}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="py-5 rounded-xl px-4 text-center text-sm" style={{ backgroundColor: "#FAF9F7", color: MUTED }}>
+                    <p className="mt-5 rounded-xl px-4 py-5 text-center text-sm" style={{ backgroundColor: SURFACE, color: MUTED }}>
                       No free times this week. {canGoNextWeek ? "Try the next week." : "Please get in touch to book."}
                     </p>
                   )}
                 </>
               ) : null}
-            </StepRail>
+
+              <PanelAction disabled={!slot} onClick={goNext} />
+            </div>
           ) : null}
 
-          {/* 4. Details */}
-          {service ? (
-            <StepRail
-              number={detailsStepN}
-              title="Your details"
-              state={step < PHASE_DETAILS ? "upcoming" : "active"}
-              onChange={undefined}
-              refCallback={(el) => (stepRefs.current[4] = el)}
-              last
-            >
-              <form onSubmit={book} className="grid gap-5" noValidate>
+          {activeKey === "details" ? (
+            <div>
+              <h2 className="text-lg font-semibold">Your details</h2>
+              <form onSubmit={book} className="mt-5 grid gap-4" noValidate>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField label="Full name" autoComplete="name" value={details.name} required onChange={(name) => setDetails((d) => ({ ...d, name }))} />
-                  <TextField label="Phone" type="tel" autoComplete="tel" value={details.phone} required onChange={(phone) => setDetails((d) => ({ ...d, phone }))} />
+                  <TextField label="Name" autoComplete="name" value={details.name} required onChange={(name) => setDetails((d) => ({ ...d, name }))} />
+                  <TextField label="Email" type="email" autoComplete="email" value={details.email} required onChange={(email) => setDetails((d) => ({ ...d, email }))} />
                 </div>
-                <TextField
-                  label="Email"
-                  type="email"
-                  autoComplete="email"
-                  value={details.email}
-                  required
-                  hint="Your confirmation goes here."
-                  onChange={(email) => setDetails((d) => ({ ...d, email }))}
-                />
+                <TextField label="Phone" type="tel" autoComplete="tel" value={details.phone} required onChange={(phone) => setDetails((d) => ({ ...d, phone }))} />
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium">
-                    Anything they should know? <span className="font-normal" style={{ color: MUTED }}>(optional)</span>
+                    Notes <span className="font-normal" style={{ color: MUTED }}>(optional)</span>
                   </span>
                   <textarea
                     rows={3}
                     maxLength={1000}
+                    placeholder="Anything we should know?"
                     value={details.notes}
                     onChange={(event) => setDetails((d) => ({ ...d, notes: event.target.value }))}
-                    className="rounded-xl border px-4 py-3 text-base outline-none focus:border-[var(--brand)]"
+                    className="rounded-lg border px-3.5 py-3 text-base outline-none focus:border-[var(--brand)]"
                     style={{ borderColor: BORDER }}
                   />
                 </label>
@@ -687,50 +705,44 @@ export function BookingFlow(props: Props) {
                 />
 
                 {paymentNotice ? (
-                  <>
-                    <div className="flex gap-3 rounded-xl border p-4" style={{ borderColor: BORDER, backgroundColor: "#FAF9F7" }}>
-                      <Lock className="mt-0.5 size-[18px] shrink-0" style={{ color: SECONDARY }} aria-hidden />
-                      <div>
-                        <p className="text-sm font-medium">Payment required</p>
-                        <p className="mt-1 text-sm leading-6" style={{ color: SECONDARY }}>
-                          {paymentNotice}
-                        </p>
-                      </div>
-                    </div>
-                    <details className="group rounded-xl border p-4" style={{ borderColor: BORDER }}>
-                      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
-                        Have a discount code?
-                        <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
-                      </summary>
-                      <input
-                        type="text"
-                        maxLength={40}
-                        value={details.discountCode}
-                        onChange={(event) => setDetails((d) => ({ ...d, discountCode: event.target.value }))}
-                        placeholder="Enter discount code"
-                        className="mt-4 h-12 w-full rounded-lg border px-4 text-sm outline-none focus:border-[var(--brand)] sm:max-w-xs"
-                        style={{ borderColor: BORDER }}
-                      />
-                    </details>
-                  </>
+                  <div className="flex gap-3 rounded-xl border border-[#F0D9A8] bg-[#FDF6E7] p-4">
+                    <AlertTriangle className="mt-0.5 size-[18px] shrink-0 text-[#9A7616]" aria-hidden />
+                    <p className="text-sm text-[#6B5713]">{paymentNotice}</p>
+                  </div>
+                ) : null}
+
+                {paymentNotice ? (
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium">
+                      Discount code <span className="font-normal" style={{ color: MUTED }}>(optional)</span>
+                    </span>
+                    <input
+                      type="text"
+                      maxLength={40}
+                      value={details.discountCode}
+                      onChange={(event) => setDetails((d) => ({ ...d, discountCode: event.target.value }))}
+                      className="h-11 rounded-lg border px-3.5 text-sm outline-none focus:border-[var(--brand)] sm:max-w-xs"
+                      style={{ borderColor: BORDER }}
+                    />
+                  </label>
                 ) : null}
 
                 {props.policyText.trim() ? (
-                  <div className="rounded-xl border p-4" style={{ borderColor: BORDER, backgroundColor: "#FAF9F7" }}>
-                    <p className="text-sm font-medium">Booking &amp; cancellation policy</p>
-                    <p className="mt-1.5 whitespace-pre-line text-xs leading-6" style={{ color: SECONDARY }}>
-                      {props.policyText.trim()}
-                    </p>
-                    <label className="mt-4 flex items-start gap-2.5 border-t pt-4" style={{ borderColor: BORDER }}>
-                      <input
-                        type="checkbox"
-                        checked={details.agreed}
-                        onChange={(event) => setDetails((d) => ({ ...d, agreed: event.target.checked }))}
-                        className="mt-0.5 size-4 shrink-0 accent-[var(--brand)]"
-                      />
-                      <span className="text-sm">I&apos;ve read and agree to the booking and cancellation policy</span>
-                    </label>
-                  </div>
+                  <label className="flex items-start gap-2.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={details.agreed}
+                      onChange={(event) => setDetails((d) => ({ ...d, agreed: event.target.checked }))}
+                      className="mt-0.5 size-4 shrink-0 accent-[var(--brand)]"
+                    />
+                    <span>
+                      I agree to the{" "}
+                      <span className="underline underline-offset-2" title={props.policyText.trim()}>
+                        booking and cancellation policy
+                      </span>
+                      .
+                    </span>
+                  </label>
                 ) : null}
 
                 <p className="text-sm" style={{ color: MUTED }}>
@@ -747,135 +759,88 @@ export function BookingFlow(props: Props) {
                   </p>
                 ) : null}
 
-                <div className="grid gap-2">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-8 font-medium text-[var(--brand-ink)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" aria-hidden />
-                        Processing…
-                      </>
-                    ) : (
-                      <>
-                        {props.autoConfirm ? "Book appointment" : "Request appointment"}
-                        <ArrowRight className="size-4" aria-hidden />
-                      </>
-                    )}
-                  </button>
-                  {paymentNotice ? (
-                    <p className="flex items-center gap-1.5 text-xs" style={{ color: MUTED }}>
-                      <Lock className="size-3" aria-hidden />
-                      Secure payment on the next step
-                    </p>
-                  ) : null}
-                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-8 font-medium text-[var(--brand-ink)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                      Processing…
+                    </>
+                  ) : (
+                    <>
+                      {props.autoConfirm ? "Book appointment" : "Request appointment"}
+                      <ArrowRight className="size-4" aria-hidden />
+                    </>
+                  )}
+                </button>
               </form>
-            </StepRail>
+            </div>
           ) : null}
         </div>
       </div>
 
-      {/* The appointment as it takes shape. */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-8">
-          <Summary
-            service={service}
-            person={staffChoice === "any" ? "Anyone available" : chosenPerson?.name ?? null}
-            slot={slot}
-            currency={currency}
-            businessName={props.businessName}
-            paymentNotice={paymentNotice}
-          />
-        </div>
-      </aside>
+      {/* Your appointment so far */}
+      <aside className="lg:sticky lg:top-8">
+        <div className="rounded-2xl border bg-white p-6" style={{ borderColor: BORDER }}>
+          <div className="flex items-center gap-2">
+            <Calendar className="size-[18px]" style={{ color: "var(--brand)" }} aria-hidden />
+            <p className="font-semibold">Your appointment so far</p>
+          </div>
 
-      {service ? (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-white/95 px-4 py-3 backdrop-blur lg:hidden" style={{ borderColor: BORDER, paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
-          <div className="mx-auto flex max-w-6xl items-center gap-3 text-sm">
-            <span className="min-w-0 flex-1 truncate">
-              <span className="font-medium">{service.name}</span>
-              {slot ? (
-                <span style={{ color: MUTED }}> · {formatDayShort(slot.date)}, {formatTime(slot.time)}</span>
-              ) : null}
-            </span>
-            <span className="font-tabular shrink-0 font-semibold">{formatServicePrice(service, currency)}</span>
+          <div className="mt-5 grid gap-4">
+            <SidebarField label="Service" value={service ? `${service.name} · ${formatServicePrice(service, currency)}` : null} onChange={service ? () => goTo("service") : undefined} />
+            {stepDefs.some((s) => s.key === "staff") ? (
+              <SidebarField
+                label="Staff"
+                value={staffChoice ? (staffChoice === "any" ? "Anyone available" : chosenPerson?.name ?? null) : null}
+                onChange={staffChoice ? () => goTo("staff") : undefined}
+              />
+            ) : null}
+            <SidebarField label="Time" value={slot ? `${formatDayShort(slot.date)}, ${formatTime(slot.time)}` : null} onChange={slot ? () => goTo("time") : undefined} />
+            <SidebarField label="Your details" value={details.name ? details.name : null} />
+          </div>
+
+          <div className="mt-5 flex items-baseline justify-between border-t pt-4" style={{ borderColor: BORDER }}>
+            <span className="text-sm font-medium">Total</span>
+            <span className="font-tabular text-lg font-semibold">{service ? formatServicePrice(service, currency) : "—"}</span>
           </div>
         </div>
-      ) : null}
+      </aside>
     </div>
   );
 }
 
-function StepRail({
-  number,
-  title,
-  state,
-  summary,
-  onChange,
-  refCallback,
-  last = false,
-  children,
-}: {
-  number: number;
-  title: string;
-  state: StepState;
-  summary?: string | null;
-  onChange?: () => void;
-  refCallback: (el: HTMLElement | null) => void;
-  last?: boolean;
-  children: React.ReactNode;
-}) {
-  const complete = state === "complete";
-  const active = state === "active";
+function PanelAction({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
   return (
-    <section ref={refCallback} className="flex gap-4 scroll-mt-6 sm:gap-5">
-      <div className="flex flex-col items-center">
-        <div
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold"
-          style={
-            complete
-              ? { borderColor: "var(--brand)", backgroundColor: "var(--brand)", color: "var(--brand-ink)" }
-              : active
-                ? { borderColor: "var(--brand)", backgroundColor: "var(--accent)", color: "var(--accent-ink)" }
-                : { borderColor: "#E5E2DE", backgroundColor: "#fff", color: "#99938D" }
-          }
-        >
-          {complete ? <Check className="size-4" aria-hidden /> : number}
-        </div>
-        {!last ? <div className="mt-2 w-px flex-1" style={{ backgroundColor: complete ? "var(--brand)" : BORDER, opacity: complete ? 0.4 : 1, minHeight: 24 }} /> : null}
-      </div>
-
-      <div className="min-w-0 flex-1 pb-12 sm:pb-14">
-        <div className="flex min-h-9 items-center justify-between gap-3">
-          <h2 className="min-w-0 font-[family-name:var(--font-heading)] text-xl">{title}</h2>
-          {complete && onChange ? (
-            <button type="button" onClick={onChange} className="shrink-0 text-sm font-medium underline-offset-4 hover:underline" style={{ color: "var(--brand)" }}>
-              Change
-            </button>
-          ) : null}
-        </div>
-
-        {complete ? (
-          <p className="mt-2 flex items-center gap-2 text-sm" style={{ color: SECONDARY }}>
-            <Check className="size-4 shrink-0" style={{ color: "var(--brand)" }} aria-hidden />
-            <span className="truncate">{summary}</span>
-          </p>
-        ) : active ? (
-          <div className="mt-5 min-w-0">{children}</div>
-        ) : (
-          <p className="mt-2 text-sm" style={{ color: "#A29D97" }}>
-            Complete the previous step to continue.
-          </p>
-        )}
-      </div>
-    </section>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="mt-7 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-8 font-medium text-[var(--brand-ink)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+    >
+      Continue
+      <ArrowRight className="size-4" aria-hidden />
+    </button>
   );
 }
 
-function PersonCard({
+function CategoryTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition"
+      style={active ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--accent-ink)" } : { borderColor: BORDER, color: SECONDARY }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PersonRow({
   name,
   detail,
   photoUrl,
@@ -895,38 +860,30 @@ function PersonCard({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className="relative flex min-w-0 flex-col items-center gap-3 rounded-xl border p-4 text-center transition"
+      className="flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition"
       style={{ borderColor: selected ? "var(--brand)" : BORDER, backgroundColor: selected ? "var(--accent)" : "#fff" }}
     >
-      <div className="relative">
-        {anyone ? (
-          <span className="flex size-14 items-center justify-center rounded-full bg-[#F1EFEC]">
-            <Users className="size-6" style={{ color: "#77716B" }} aria-hidden />
-          </span>
-        ) : photoUrl ? (
-          <Image src={photoUrl} alt="" width={56} height={56} className="size-14 rounded-full object-cover" />
-        ) : (
-          <span className="flex size-14 items-center justify-center rounded-full bg-[var(--accent)] font-[family-name:var(--font-heading)] text-lg text-[var(--accent-ink)]">
-            {name.charAt(0)}
-          </span>
-        )}
-        {selected ? (
-          <span
-            className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full border-2 border-white"
-            style={{ backgroundColor: "var(--brand)", color: "var(--brand-ink)" }}
-            aria-hidden
-          >
-            <Check className="size-3.5" />
-          </span>
-        ) : null}
-      </div>
-      <span className="min-w-0">
+      {anyone ? (
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: SURFACE }}>
+          <Users className="size-5" style={{ color: MUTED }} aria-hidden />
+        </span>
+      ) : photoUrl ? (
+        <Image src={photoUrl} alt="" width={44} height={44} className="size-11 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] font-[family-name:var(--font-heading)] text-base text-[var(--accent-ink)]">
+          {name.charAt(0)}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{name}</span>
         {detail ? (
-          <span className="mt-0.5 block truncate text-xs" style={{ color: MUTED }}>
+          <span className="block truncate text-xs" style={{ color: MUTED }}>
             {detail}
           </span>
         ) : null}
+      </span>
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: selected ? "var(--brand)" : "#D6D1CB" }} aria-hidden>
+        {selected ? <span className="size-2.5 rounded-full" style={{ backgroundColor: "var(--brand)" }} /> : null}
       </span>
     </button>
   );
@@ -939,7 +896,6 @@ function TextField({
   type = "text",
   autoComplete,
   required,
-  hint,
 }: {
   label: string;
   value: string;
@@ -947,7 +903,6 @@ function TextField({
   type?: string;
   autoComplete?: string;
   required?: boolean;
-  hint?: string;
 }) {
   return (
     <label className="grid gap-1.5 text-sm">
@@ -958,93 +913,43 @@ function TextField({
         required={required}
         autoComplete={autoComplete}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 rounded-lg border px-4 text-base outline-none focus:border-[var(--brand)]"
+        className="h-11 rounded-lg border px-3.5 text-base outline-none focus:border-[var(--brand)]"
         style={{ borderColor: BORDER }}
       />
-      {hint ? (
-        <span className="text-xs" style={{ color: MUTED }}>
-          {hint}
-        </span>
-      ) : null}
     </label>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function SidebarField({ label, value, onChange }: { label: string; value: string | null; onChange?: () => void }) {
   return (
-    <div className="flex gap-6 py-4">
-      <dt className="w-20 shrink-0" style={{ color: MUTED }}>
-        {label}
-      </dt>
-      <dd className="min-w-0">{children}</dd>
+    <div className="flex items-start gap-3">
+      <span
+        className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full"
+        style={value ? { backgroundColor: "var(--brand)", color: "var(--brand-ink)" } : { border: "1.5px solid #D6D1CB" }}
+        aria-hidden
+      >
+        {value ? <Check className="size-3" /> : null}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block truncate text-sm" style={{ color: value ? SECONDARY : "#B9B4AE" }}>
+          {value ?? "Not selected yet"}
+        </span>
+      </span>
+      {value && onChange ? (
+        <button type="button" onClick={onChange} className="shrink-0 text-xs font-medium underline-offset-4 hover:underline" style={{ color: "var(--brand)" }}>
+          Change
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function Summary({
-  service,
-  person,
-  slot,
-  currency,
-  businessName,
-  paymentNotice,
-}: {
-  service: Service | null;
-  person: string | null;
-  slot: SlotOption | null;
-  currency: string;
-  businessName: string;
-  paymentNotice: string | null;
-}) {
+function SummaryRow({ icon: Icon, children }: { icon: typeof Calendar; children: React.ReactNode }) {
   return (
-    <>
-      <div className="rounded-2xl border bg-white p-7 shadow-[0_4px_24px_rgba(0,0,0,0.035)]" style={{ borderColor: BORDER }}>
-        <div className="flex items-center justify-between">
-          <p className="font-[family-name:var(--font-heading)] text-xl">Your appointment</p>
-          <Calendar className="size-[19px]" style={{ color: MUTED }} aria-hidden />
-        </div>
-        <p className="mt-1 text-xs" style={{ color: MUTED }}>
-          at {businessName}
-        </p>
-
-        <div className="my-6 border-t" style={{ borderColor: BORDER }} />
-
-        <dl className="grid gap-4 text-[15px]">
-          <SummaryLine label="Service" value={service ? service.name : null} extra={service ? formatDuration(service.durationMinutes) : null} />
-          <SummaryLine label="With" value={service ? person : null} />
-          <SummaryLine label="When" value={slot ? formatDayLong(slot.date) : null} extra={slot ? formatTime(slot.time) : null} />
-        </dl>
-        {service ? (
-          <div className="mt-6 flex items-baseline justify-between border-t pt-4" style={{ borderColor: BORDER }}>
-            <span className="text-sm" style={{ color: SECONDARY }}>
-              Estimated price
-            </span>
-            <span className="font-tabular text-lg font-semibold">{formatServicePrice(service, currency)}</span>
-          </div>
-        ) : null}
-      </div>
-      <p className="mt-4 flex items-start gap-2 px-1 text-xs leading-5" style={{ color: MUTED }}>
-        <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-        {paymentNotice ?? "Your information is handled securely and used to manage your appointment."}
-      </p>
-    </>
-  );
-}
-
-function SummaryLine({ label, value, extra }: { label: string; value: string | null; extra?: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs" style={{ color: MUTED }}>
-        {label}
-      </dt>
-      <dd className={value ? "font-medium" : ""} style={!value ? { color: "#C2BDB7" } : undefined}>
-        {value ?? "Not chosen yet"}
-        {value && extra ? (
-          <span className="block text-sm font-normal" style={{ color: SECONDARY }}>
-            {extra}
-          </span>
-        ) : null}
-      </dd>
+    <div className="flex items-center gap-3 text-sm">
+      <Icon className="size-4 shrink-0" style={{ color: "var(--brand)" }} aria-hidden />
+      <span>{children}</span>
     </div>
   );
 }
