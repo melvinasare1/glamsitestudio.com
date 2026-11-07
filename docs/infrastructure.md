@@ -142,3 +142,14 @@ removed with MoMo billing in stage 2.
   account, bad details). Emails the owner (link to Billing to fix it) and
   `SUPPORT_INBOX_EMAIL`, since the money just sits in their Stripe balance
   until they do.
+- Production webhook endpoints (live mode, both at `https://glamsitestudio.com/api/stripe/webhook`),
+  set up 7 Nov 2026: Account endpoint `we_1UXUbTCQYXxSrNIj2Py0XpHo`
+  (`checkout.session.completed`, `customer.subscription.updated`/`.deleted`)
+  and Connect endpoint `we_1UZEqFCQYXxSrNIjodX8CBTE` (`account.updated`,
+  `payout.failed`), both signing secrets already in the `glamsitestudio.com`
+  Vercel project's production env (`STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_CONNECT_WEBHOOK_SECRET`) — env vars only take effect on a project's
+  *next* deployment, not retroactively on one already running. There's also
+  a third, unrelated live endpoint on this Stripe account
+  (`we_1UGRFWCQYXxSrNIjRq7nSr2i`, pointed at `clean-city-backend-plum.vercel.app`)
+  left alone deliberately; it predates this project and isn't ours to touch.
