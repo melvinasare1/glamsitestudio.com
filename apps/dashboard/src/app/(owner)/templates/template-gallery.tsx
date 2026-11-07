@@ -57,7 +57,11 @@ export function TemplateGallery({ templateId, demoBaseUrl }: { templateId: strin
         return;
       }
       const next = TEMPLATES.find((item) => item.id === id);
-      toast.success(`Switched to the ${next?.name ?? id} template. Your content is unchanged.`);
+      toast.success(
+        result.seeded
+          ? `Switched to the ${next?.name ?? id} template, filled in with example content to edit.`
+          : `Switched to the ${next?.name ?? id} template. Your content is unchanged.`
+      );
       router.refresh();
     });
   }

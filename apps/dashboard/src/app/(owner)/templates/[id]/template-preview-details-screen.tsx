@@ -47,7 +47,11 @@ export function TemplatePreviewDetailsScreen({
         toast.error(result.error);
         return;
       }
-      toast.success(`Switched to the ${template.name} template. Your content is unchanged.`);
+      toast.success(
+        result.seeded
+          ? `Switched to the ${template.name} template, filled in with example content to edit.`
+          : `Switched to the ${template.name} template. Your content is unchanged.`
+      );
       router.refresh();
     });
   }
