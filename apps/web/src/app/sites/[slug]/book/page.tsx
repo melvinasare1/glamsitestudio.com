@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Phone, ArrowUpRight } from "lucide-react";
 import { sitePath } from "@glamsite/shared/domain";
 import { sectionText } from "@glamsite/shared/site-content";
 import { BookingFlow } from "@/components/booking/BookingFlow";
-import { BookingFrame, BookingNotice } from "@/components/booking/BookingFrame";
+import { BookingFrame, BookingNotice, NoticeButton, NoticeLinkButton } from "@/components/booking/BookingFrame";
 import { loadBookingSite } from "@/lib/booking";
 import { bookingHref, siteTitle } from "@/templates/shared";
 
@@ -35,16 +36,23 @@ export default async function BookPage({ params, searchParams }: Props) {
     const elsewhere = bookingHref(business);
     return (
       <BookingFrame business={business} homeHref={sitePath(business.slug, "/")}>
-        <BookingNotice title="Online booking isn't available here">
-          {elsewhere.startsWith("http") ? (
-            <a className="underline underline-offset-4" href={elsewhere}>
-              Book with {business.name} here
-            </a>
-          ) : business.phone ? (
-            <>Call {business.phone} to book.</>
-          ) : (
-            <>Get in touch with {business.name} to book.</>
-          )}
+        <BookingNotice
+          title="Online booking isn't available here"
+          actions={
+            elsewhere.startsWith("http") ? (
+              <NoticeLinkButton href={elsewhere}>
+                Book with {business.name} here
+                <ArrowUpRight className="size-4" aria-hidden />
+              </NoticeLinkButton>
+            ) : business.phone ? (
+              <NoticeButton href={`tel:${business.phone}`}>
+                <Phone className="size-4" aria-hidden />
+                Call {business.phone}
+              </NoticeButton>
+            ) : undefined
+          }
+        >
+          We&apos;d still love to hear from you &mdash; get in touch directly to arrange your appointment.
         </BookingNotice>
       </BookingFrame>
     );
@@ -57,8 +65,12 @@ export default async function BookPage({ params, searchParams }: Props) {
   return (
     <BookingFrame business={business} homeHref={sitePath(business.slug, "/")}>
       {site.services.length === 0 || site.staff.length === 0 ? (
-        <BookingNotice title="No times are open for online booking yet">
-          {business.phone ? <>Call {business.phone} to book.</> : <>Please check back soon.</>}
+        <BookingNotice
+          title="No times are open for booking yet"
+          actions={business.phone ? <NoticeButton href={`tel:${business.phone}`}><Phone className="size-4" aria-hidden />Call {business.phone}</NoticeButton> : undefined}
+        >
+          There aren&apos;t any upcoming appointments available online at the moment.{" "}
+          {business.phone ? "Please get in touch and we'll be happy to help." : "Please check back soon."}
         </BookingNotice>
       ) : (
         <BookingFlow
