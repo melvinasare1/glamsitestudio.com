@@ -13,7 +13,7 @@ Sites Plan" doc.
 - [x] Infrastructure spec and env var matrix in `docs/infrastructure.md`
 - [x] Supabase org "Glam Site Studio" with production and staging projects;
       all migrations applied to both, security advisor clean
-- [ ] Vercel projects `glamsitestudio-web` and `glamsitestudio-dashboard`,
+- [x] Vercel projects `glamsitestudio.com` (web) and `glamsitestudio-dashboard`,
       with a wildcard subdomain on the platform domain
 - [ ] Confirm both apps boot on the new infrastructure (gate)
 
