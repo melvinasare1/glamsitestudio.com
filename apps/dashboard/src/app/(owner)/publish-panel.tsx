@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, Loader2Icon } from "lucide-react";
 import { Panel } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { useBusiness } from "@/lib/business-context";
@@ -14,12 +14,26 @@ import { startLaunchCheckout } from "./billing/actions";
  * thing gated on payment. Everything else in the dashboard is open from
  * sign-up. After launch, publish/unpublish is free, same as before.
  */
-export function PublishPanel({ ready, launched }: { ready: boolean; launched: boolean }) {
+export function PublishPanel({ ready, launched, pending: paymentPending }: { ready: boolean; launched: boolean; pending?: boolean }) {
   const { business, siteUrl, previewUrl } = useBusiness();
   const { pending, run } = useAction();
   const [launchPending, startLaunchTransition] = useTransition();
   const [launchError, setLaunchError] = useState<string | null>(null);
   const live = business.status === "live";
+
+  if (paymentPending) {
+    return (
+      <Panel title="Confirming your payment…" description="This can take a minute. We'll email you once it's done.">
+        <p className="flex items-center gap-2 text-sm">
+          <Loader2Icon className="size-4 animate-spin text-muted-foreground" aria-hidden />
+          Checking with Stripe&hellip;{" "}
+          <a href="/" className="font-medium text-brand underline underline-offset-2">
+            Refresh
+          </a>
+        </p>
+      </Panel>
+    );
+  }
 
   if (!launched) {
     return (

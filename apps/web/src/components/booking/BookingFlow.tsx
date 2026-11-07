@@ -14,6 +14,7 @@ import {
   Tag,
   User,
   Users,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import { addDays, depositAmountCents, formatDayLong, formatDayShort, staffForService, type PaymentPolicy } from "@glamsite/shared/booking";
@@ -52,6 +53,8 @@ type Props = {
   /** From a `?ref=` link a referrer shared, if any. Not shown in the form. */
   initialReferralCode?: string;
   bookingHeading: string;
+  /** Landed here via Checkout's cancel_url: payment wasn't completed, nothing was booked. */
+  paymentCancelled?: boolean;
 };
 
 /** How many days of times we ask for at once. */
@@ -179,6 +182,7 @@ export function BookingFlow(props: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
+  const [showCancelledNotice, setShowCancelledNotice] = useState(props.paymentCancelled ?? false);
 
   const requestId = useRef(0);
 
@@ -407,8 +411,23 @@ export function BookingFlow(props: Props) {
   const categoryTabs = allGroups.map((g) => g.category).filter((c): c is ServiceCategory => c !== null);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
-      <div className="rounded-2xl border bg-white p-5 sm:p-8" style={{ borderColor: BORDER }} ref={panelRef}>
+    <>
+      {showCancelledNotice ? (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#ece6e3] bg-[#f7f4f2] px-4 py-3.5 text-sm text-[#4a4145]">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p className="flex-1">Payment wasn&apos;t completed, so this time wasn&apos;t booked. Pick a time below to try again.</p>
+          <button
+            type="button"
+            onClick={() => setShowCancelledNotice(false)}
+            aria-label="Dismiss"
+            className="shrink-0 text-[#6e6468] hover:text-[#2b1631]"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+        <div className="rounded-2xl border bg-white p-5 sm:p-8" style={{ borderColor: BORDER }} ref={panelRef}>
         {/* Header: heading + step tracker */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-b pb-6" style={{ borderColor: BORDER }}>
           <h1 className="font-[family-name:var(--font-heading)] text-2xl font-semibold">{props.bookingHeading}</h1>
@@ -809,7 +828,8 @@ export function BookingFlow(props: Props) {
           </div>
         </div>
       </aside>
-    </div>
+      </div>
+    </>
   );
 }
 

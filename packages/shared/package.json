@@ -5,6 +5,7 @@
   "exports": {
     "./demo": "./src/demo.ts",
     "./billing": "./src/billing.ts",
+    "./billing-sync": "./src/billing-sync.ts",
     "./booking": "./src/booking.ts",
     "./call-slots": "./src/call-slots.ts",
     "./domain": "./src/domain.ts",

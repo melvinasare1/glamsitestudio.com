@@ -23,7 +23,9 @@ const STATUS: Record<string, string> = {
   incomplete: "Incomplete",
 };
 
-export default async function BillingPage() {
+type Props = { searchParams: { checkout?: string } };
+
+export default async function BillingPage({ searchParams }: Props) {
   // Re-checks a pending Connect account straight with Stripe before reading
   // the session, instead of trusting the account.updated webhook to have
   // landed by now (see refreshConnectStatus's own comment for why).
@@ -36,6 +38,11 @@ export default async function BillingPage() {
     <>
       <PageHeader title="Billing" />
       <PageBody>
+        {searchParams.checkout === "cancelled" && !launched ? (
+          <div className="rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            Payment wasn&apos;t completed &mdash; nothing was charged. Launch whenever you&apos;re ready.
+          </div>
+        ) : null}
         <Panel title="Your plan">
           <dl className="grid gap-3 text-sm sm:grid-cols-3">
             <div>

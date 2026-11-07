@@ -8,6 +8,7 @@
  * no-double-booking rule settles races between two clients.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type Stripe from "stripe";
 import {
   ACTIVE_STATUSES,
   addDays,
@@ -39,7 +40,7 @@ import {
   type BookingEmailDetails,
 } from "@glamsite/shared/email";
 import { formatAddress, formatServicePrice } from "@glamsite/shared/format";
-import { getStripe, refundConnectPayment } from "@glamsite/shared/stripe";
+import { getStripe, refundConnectPayment, stripeObjectId } from "@glamsite/shared/stripe";
 import {
   appointmentFromRow,
   billingFromRow,
@@ -371,11 +372,6 @@ export type BookingOutcome =
   | { ok: true; checkoutUrl: string }
   | { ok: false; error: string; status: number; code?: "slot_taken" | "invalid_discount" };
 
-function stripeObjectId(value: string | { id: string } | null | undefined): string | null {
-  if (!value) return null;
-  return typeof value === "string" ? value : value.id;
-}
-
 const TAKEN: BookingOutcome = {
   ok: false,
   error: "That time is no longer available. Please choose another.",
@@ -690,8 +686,11 @@ export async function createBooking(site: BookingSite, request: BookingRequest):
             transfer_data: { destination: connectAccountId as string },
           },
           metadata: { appointmentId: data.id, finalStatus },
-          success_url: siteLink(business, `/appointment/${token}`, getWebUrl()),
-          cancel_url: siteLink(business, "/book", getWebUrl()),
+          // session_id lets the appointment page confirm the payment itself
+          // on first load instead of only trusting the webhook's timing
+          // (confirmBookingPayment is idempotent, so both running is fine).
+          success_url: siteLink(business, `/appointment/${token}?session_id={CHECKOUT_SESSION_ID}`, getWebUrl()),
+          cancel_url: siteLink(business, "/book?cancelled=1", getWebUrl()),
         });
         if (!session.url) throw new Error("Checkout session has no url");
         await supabase
@@ -764,6 +763,99 @@ export async function sendBookingConfirmationEmails(
   if (attempts.length) {
     await supabase.rpc("increment_email_usage", { p_business_id: business.id, p_year_month: gate.yearMonth, p_count: attempts.length });
   }
+}
+
+/**
+ * A client paid their deposit/full price via Checkout on the salon's
+ * connected account (stage 5 Connect). Confirms the appointment and sends
+ * the usual booking emails. Shared by the Stripe webhook (the source of
+ * truth) and the appointment page's own post-redirect check (apps/web/src/app/sites/[slug]/appointment/[token]/page.tsx,
+ * same reasoning as billing-sync's confirmLaunchFromSession) — idempotent,
+ * safe to call more than once for the same session.
+ *
+ * If the 15-minute hold already expired and released the slot
+ * (createBooking's expirePendingPayments), re-check before reinstating — if
+ * someone else took it, or it's now in the past, refund instead of silently
+ * keeping the client's money for a slot they don't have.
+ */
+export async function confirmBookingPayment(session: Stripe.Checkout.Session): Promise<void> {
+  const appointmentId = session.metadata?.appointmentId;
+  if (!appointmentId) return;
+  const finalStatus = session.metadata?.finalStatus === "confirmed" ? "confirmed" : "pending";
+  const paymentIntentId = stripeObjectId(session.payment_intent);
+
+  const admin = createAdminClient();
+  const { data: row, error } = await admin
+    .from("appointments")
+    .select("*, clients!appointments_client_id_business_id_fkey(name, email, phone), staff(name)")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (error || !row) {
+    console.error("[booking] payment confirm: appointment not found", appointmentId, error);
+    return;
+  }
+
+  if (row.status === "cancelled") {
+    const conflict = await admin
+      .from("appointments")
+      .select("id")
+      .eq("business_id", row.business_id)
+      .eq("staff_id", row.staff_id)
+      .neq("id", appointmentId)
+      .in("status", ACTIVE_STATUSES)
+      .lt("starts_at", row.ends_at as string)
+      .gt("ends_at", row.starts_at as string)
+      .maybeSingle();
+    const stillUpcoming = new Date(row.starts_at as string).getTime() > Date.now();
+    if (conflict.data || !stillUpcoming) {
+      if (paymentIntentId) {
+        try {
+          await refundConnectPayment(getStripe(), paymentIntentId, row.deposit_cents as number);
+        } catch (refundError) {
+          console.error("[booking] refund for expired booking slot failed", appointmentId, refundError);
+        }
+      }
+      console.error("[booking] payment succeeded after the slot was lost; refunded", appointmentId);
+      return;
+    }
+  }
+
+  if (row.status === finalStatus && row.deposit_status === "paid") return; // already confirmed (e.g. webhook beat us here)
+
+  const { error: updateError } = await admin
+    .from("appointments")
+    .update({ status: finalStatus, deposit_status: "paid", stripe_payment_intent_id: paymentIntentId, cancelled_at: null })
+    .eq("id", appointmentId);
+  if (updateError) {
+    console.error("[booking] payment confirm failed", appointmentId, updateError);
+    return;
+  }
+
+  const [businessResult, settingsResult] = await Promise.all([
+    admin.from("businesses").select("*").eq("id", row.business_id).maybeSingle(),
+    admin.from("booking_settings").select("*").eq("business_id", row.business_id).maybeSingle(),
+  ]);
+  if (!businessResult.data) return;
+
+  const business = businessFromRow(businessResult.data);
+  const rules = bookingRulesFromRow(settingsResult.data);
+  const appointment = appointmentFromRow({ ...row, status: finalStatus });
+  const client = appointment.client ?? { name: "", email: "", phone: "" };
+  await sendBookingConfirmationEmails(
+    admin,
+    business,
+    rules,
+    {
+      serviceName: appointment.serviceName,
+      startsAt: appointment.startsAt,
+      staffName: appointment.staffName,
+      priceCents: appointment.priceCents,
+      clientNotes: appointment.clientNotes,
+    },
+    client,
+    finalStatus,
+    row.manage_token as string
+  );
 }
 
 // ---------------------------------------------------------------------------

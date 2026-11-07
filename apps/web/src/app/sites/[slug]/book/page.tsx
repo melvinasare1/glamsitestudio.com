@@ -10,7 +10,7 @@ import { bookingHref, siteTitle } from "@/templates/shared";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: { slug: string }; searchParams: { service?: string; staff?: string; ref?: string } };
+type Props = { params: { slug: string }; searchParams: { service?: string; staff?: string; ref?: string; cancelled?: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const loaded = await loadBookingSite(params.slug);
@@ -106,6 +106,7 @@ export default async function BookPage({ params, searchParams }: Props) {
           depositFixedCents={site.rules.depositFixedCents}
           homeHref={sitePath(business.slug, "/")}
           manageBase={sitePath(business.slug, "/appointment/")}
+          paymentCancelled={searchParams.cancelled === "1"}
           initialServiceId={searchParams.service}
           initialStaffId={searchParams.staff}
           initialReferralCode={searchParams.ref}

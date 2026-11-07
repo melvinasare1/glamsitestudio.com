@@ -3,39 +3,73 @@ import { notFound } from "next/navigation";
 import { STATUS_LABELS, formatClock, formatDayLong, safeTimeZone, zonedParts } from "@glamsite/shared/booking";
 import { sitePath } from "@glamsite/shared/domain";
 import { formatAddress, formatMoney } from "@glamsite/shared/format";
+import { getStripe } from "@glamsite/shared/stripe";
 import { BookingFrame } from "@/components/booking/BookingFrame";
 import { CancelAppointment } from "@/components/booking/CancelAppointment";
+import { PaymentProcessingPoll } from "@/components/booking/PaymentProcessingPoll";
 import { ReferAFriend } from "@/components/booking/ReferAFriend";
-import { getAppointmentByToken, getReferralLink } from "@/lib/booking";
+import { confirmBookingPayment, getAppointmentByToken, getReferralLink } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Your appointment", robots: { index: false, follow: false } };
 
-type Props = { params: { slug: string; token: string } };
+type Props = { params: { slug: string; token: string }; searchParams: { session_id?: string } };
 
-/** The client's private link from their confirmation email: see the booking and cancel it. */
-export default async function AppointmentPage({ params }: Props) {
-  const managed = await getAppointmentByToken(params.token);
+/**
+ * The client's private link from their confirmation email, and also
+ * Checkout's success_url for a paid booking (with ?session_id=...). The
+ * webhook is the source of truth, but it can land after this page's first
+ * render, so when we're the one holding a session_id we confirm the
+ * payment straight from Stripe ourselves first -- confirmBookingPayment is
+ * idempotent, so there's no harm if the webhook already got there.
+ */
+export default async function AppointmentPage({ params, searchParams }: Props) {
+  let managed = await getAppointmentByToken(params.token);
   if (!managed || managed.business.slug !== params.slug) notFound();
+
+  if (searchParams.session_id && managed.appointment.depositStatus === "pending") {
+    try {
+      const session = await getStripe().checkout.sessions.retrieve(searchParams.session_id);
+      if (session.metadata?.appointmentId === managed.appointment.id && session.payment_status === "paid") {
+        await confirmBookingPayment(session);
+        const refreshed = await getAppointmentByToken(params.token);
+        if (refreshed) managed = refreshed;
+      }
+      // Else: a delayed payment method (e.g. a bank debit) -- Checkout
+      // succeeded but the charge hasn't cleared yet. The "pending" state
+      // below handles it: poll until the webhook (or a later visit here)
+      // catches it up.
+    } catch (error) {
+      console.error("[appointment] confirm payment from session failed", error);
+    }
+  }
+
   const { appointment, business, rules, canCancel } = managed;
 
   const zone = safeTimeZone(business.timezone);
   const day = zonedParts(new Date(appointment.startsAt), zone).ymd;
   const cancelled = appointment.status === "cancelled";
+  // True right after a successful Checkout redirect until the payment is
+  // actually reconciled (by the block above, or the webhook) -- never true
+  // otherwise, since nothing links here with a pending deposit unless a
+  // payment was just attempted.
+  const paymentPending = !cancelled && appointment.depositStatus === "pending";
   const past = new Date(appointment.endsAt).getTime() < Date.now();
   const address = formatAddress(business.address);
   const referralLink = cancelled ? null : await getReferralLink(business, appointment.clientId);
 
-  const heading = cancelled
-    ? "This appointment is cancelled"
-    : appointment.status === "pending"
-      ? "Waiting for the salon to confirm"
-      : appointment.status === "confirmed"
-        ? past
-          ? "Your appointment"
-          : "You're booked in"
-        : STATUS_LABELS[appointment.status];
+  const heading = paymentPending
+    ? "Confirming your payment…"
+    : cancelled
+      ? "This appointment is cancelled"
+      : appointment.status === "pending"
+        ? "Waiting for the salon to confirm"
+        : appointment.status === "confirmed"
+          ? past
+            ? "Your appointment"
+            : "You're booked in"
+          : STATUS_LABELS[appointment.status];
 
   return (
     <BookingFrame business={business} homeHref={sitePath(business.slug, "/")}>
@@ -54,7 +88,9 @@ export default async function AppointmentPage({ params }: Props) {
         </dl>
 
         <div className="mt-8">
-          {cancelled ? (
+          {paymentPending ? (
+            <PaymentProcessingPoll />
+          ) : cancelled ? (
             <a
               href={sitePath(business.slug, "/book")}
               className="inline-flex rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-[var(--brand-ink)] hover:opacity-90"

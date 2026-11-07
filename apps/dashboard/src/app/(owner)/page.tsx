@@ -5,15 +5,29 @@ import { createClient } from "@glamsite/shared/supabase/server";
 import { PageBody, PageHeader, Panel } from "@/components/page";
 import { requireBusiness } from "@/lib/business";
 import { AccountManagerPanel } from "./account-manager-panel";
+import { confirmLaunchIfNeeded } from "./billing/actions";
 import { PublishPanel } from "./publish-panel";
 
 export const dynamic = "force-dynamic";
 
 type Step = { done: boolean; title: string; body: string; href: string; essential: boolean };
 
-export default async function OverviewPage() {
+type Props = { searchParams: { launched?: string; session_id?: string } };
+
+export default async function OverviewPage({ searchParams }: Props) {
+  // Right after the $1 launch redirect, confirm straight with Stripe before
+  // reading billing status below, instead of trusting the webhook to have
+  // landed by now (same reasoning as refreshConnectStatus on the billing
+  // page). No-ops once already launched.
+  if (searchParams.session_id) await confirmLaunchIfNeeded(searchParams.session_id);
+
   const { session, business } = await requireBusiness();
   const launched = session.billing?.subscriptionStatus === "active" || session.billing?.subscriptionStatus === "trialing";
+  // Landed here with a session_id but still not launched: a delayed
+  // payment method, or the webhook/our own check above both missed it for
+  // some reason. Rare, but worth a distinct message instead of silently
+  // showing "Launch your site" again as if nothing happened.
+  const launchPending = Boolean(searchParams.session_id) && !launched;
   const supabase = await createClient();
   const count = async (table: "services" | "staff" | "opening_hours") =>
     (await supabase.from(table).select("id", { count: "exact", head: true }).eq("business_id", business.id)).count ?? 0;
@@ -80,7 +94,7 @@ export default async function OverviewPage() {
     <>
       <PageHeader title={`Welcome, ${business.name}`} />
       <PageBody>
-        <PublishPanel ready={ready} launched={launched} />
+        <PublishPanel ready={ready} launched={launched} pending={launchPending} />
 
         <Panel title="Set up your site" description={`${doneCount} of ${steps.length} done`}>
           <ul className="grid gap-1">
