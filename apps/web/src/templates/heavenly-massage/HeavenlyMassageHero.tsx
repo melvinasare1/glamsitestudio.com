@@ -7,6 +7,7 @@ export function HeavenlyMassageHero({
   tagline,
   subheadline,
   image,
+  secondaryImage,
   bookingHref,
   bookingLabel,
 }: {
@@ -14,6 +15,7 @@ export function HeavenlyMassageHero({
   tagline: string;
   subheadline: string;
   image: string;
+  secondaryImage: string;
   bookingHref: string;
   bookingLabel: string;
 }) {
