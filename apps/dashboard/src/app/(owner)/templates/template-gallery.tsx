@@ -19,9 +19,10 @@ const BUSINESS_TYPE_LABEL: Record<TemplateBusinessType, string> = {
   nails: "Nails",
   "lash-brow": "Lash & brow",
   makeup: "Makeup",
+  spa: "Spa & massage",
 };
 
-const BUSINESS_TYPE_FILTERS: TemplateBusinessType[] = ["all", "salon", "barber", "nails", "lash-brow", "makeup"];
+const BUSINESS_TYPE_FILTERS: TemplateBusinessType[] = ["all", "salon", "barber", "nails", "lash-brow", "makeup", "spa"];
 
 type PriceFilter = "all" | "free" | "paid";
 type TierFilter = "all" | TemplateTier;
