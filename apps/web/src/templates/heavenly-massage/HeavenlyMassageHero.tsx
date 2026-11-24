@@ -38,6 +38,11 @@ export function HeavenlyMassageHero({
           className="-z-20 object-cover object-[68%_center]"
         />
       ) : null}
+      {secondaryImage ? (
+        <div className="absolute right-6 top-8 hidden h-[300px] w-[250px] overflow-hidden rounded-[2rem] border border-white/30 shadow-2xl md:block lg:right-16 lg:top-12 lg:h-[340px] lg:w-[300px]">
+          <Image src={secondaryImage} alt="" fill sizes="(min-width: 1024px) 300px, 250px" className="object-cover" />
+        </div>
+      ) : null}
       <div
         aria-hidden
         className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(48,32,20,0.94)_0%,rgba(63,42,27,0.83)_34%,rgba(63,42,27,0.16)_72%,rgba(63,42,27,0.03)_100%)]"
