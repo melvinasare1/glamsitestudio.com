@@ -1,4 +1,4 @@
-import { sectionFlag, sectionText } from "@glamsite/shared/site-content";
+import { sectionText } from "@glamsite/shared/site-content";
 import { visibleSections } from "@glamsite/shared/templates";
 import type { SiteData } from "@glamsite/shared/types";
 import { bookingHref } from "../shared";
