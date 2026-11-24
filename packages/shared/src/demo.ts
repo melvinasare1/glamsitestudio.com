@@ -321,6 +321,7 @@ function heavenlyMassageDemo(): SiteData {
       heading: "A space for total relaxation.",
       body: "Heavenly Massage is a welcoming space to slow down and reconnect with yourself. Our personalised treatments are designed to ease everyday tension, encourage deep relaxation and help you leave feeling renewed.",
       image: "/templates/heavenly-massage/hero.webp",
+      secondaryImage: "/templates/heavenly-massage/hero-secondary.webp",
     },
     services: {
       heading: "Treatment menu",
