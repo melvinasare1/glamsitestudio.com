@@ -314,7 +314,8 @@ function heavenlyMassageDemo(): SiteData {
       tagline: "Massage · Wellness · Recovery",
       headline: "Relax, restore and rebalance.",
       subheadline: "Professional massage treatments in a calm, private space, tailored to help you unwind, relieve tension and feel your best.",
-      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=2000&q=85",\n      secondaryImage: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=2000&q=85",
+      secondaryImage: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=1200&q=85",
       ctaLabel: "Book appointment",
     },
     about: {
