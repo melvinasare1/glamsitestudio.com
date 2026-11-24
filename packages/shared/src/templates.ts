@@ -19,7 +19,7 @@ export const TEMPLATE_TIER_LABEL: Record<TemplateTier, string> = {
 };
 
 /** Kind of business a template is designed for. "all" shows up in every filter. */
-export type TemplateBusinessType = "salon" | "barber" | "nails" | "lash-brow" | "makeup" | "all";
+export type TemplateBusinessType = "salon" | "barber" | "nails" | "lash-brow" | "makeup" | "spa" | "all";
 
 export type TemplateDefinition = {
   id: string;
@@ -74,6 +74,23 @@ export const TEMPLATES: TemplateDefinition[] = [
     sections: ALL_PAGE_SECTIONS,
     businessTypes: ["salon", "nails", "lash-brow", "makeup"],
     tier: "multipage",
+    priceCents: 0,
+  },
+  {
+    id: "heavenly-massage",
+    name: "Heavenly Massage",
+    tagline: "A calming, premium website for massage and wellness studios.",
+    description:
+      "A warm, restorative one-page website for massage therapists and wellness studios. Showcase treatments, explain your approach, share client reviews and make appointments easy to book.",
+    features: [
+      "Treatment highlights and a clear service menu",
+      "A calm, editorial design with spa-inspired photography",
+      "Client testimonials, FAQs and opening hours",
+      "Online booking built into the website",
+    ],
+    sections: ["hero", "services", "about", "reviews", "visit", "faqs", "booking", "contact"],
+    businessTypes: ["spa"],
+    tier: "single-page",
     priceCents: 0,
   },
   {
