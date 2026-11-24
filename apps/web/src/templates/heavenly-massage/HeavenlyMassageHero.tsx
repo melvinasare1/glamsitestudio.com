@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ArrowRight, CalendarDays } from "lucide-react";
+import { HeroPhoto } from "../HeroPhoto";
 import { opensInNewTab } from "../shared";
 
 export function HeavenlyMassageHero({
@@ -7,6 +8,7 @@ export function HeavenlyMassageHero({
   tagline,
   subheadline,
   image,
+  mobileImage,
   secondaryImage,
   bookingHref,
   bookingLabel,
@@ -15,6 +17,7 @@ export function HeavenlyMassageHero({
   tagline: string;
   subheadline: string;
   image: string;
+  mobileImage: string;
   secondaryImage: string;
   bookingHref: string;
   bookingLabel: string;
@@ -26,18 +29,14 @@ export function HeavenlyMassageHero({
   return (
     <section
       aria-labelledby="heavenly-hero-heading"
-      className="relative isolate flex min-h-[390px] items-center overflow-hidden bg-[#62452f] text-[#fffaf4] md:min-h-[420px] lg:min-h-[450px]"
+      className="relative isolate flex aspect-[3/4] items-end overflow-hidden bg-[#62452f] text-[#fffaf4] md:aspect-auto md:min-h-[420px] md:items-center lg:min-h-[450px]"
     >
-      {image ? (
-        <Image
-          src={image}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="-z-20 object-cover object-[68%_center]"
-        />
-      ) : null}
+      <HeroPhoto
+        image={image}
+        mobileImage={mobileImage}
+        priority
+        className="-z-20 object-cover object-center md:object-[68%_center]"
+      />
       {secondaryImage ? (
         <div className="absolute right-6 top-8 hidden h-[300px] w-[250px] overflow-hidden rounded-[2rem] border border-white/30 shadow-2xl md:block lg:right-16 lg:top-12 lg:h-[340px] lg:w-[300px]">
           <Image src={secondaryImage} alt="" fill sizes="(min-width: 1024px) 300px, 250px" className="object-cover" />
@@ -45,9 +44,9 @@ export function HeavenlyMassageHero({
       ) : null}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(48,32,20,0.94)_0%,rgba(63,42,27,0.83)_34%,rgba(63,42,27,0.16)_72%,rgba(63,42,27,0.03)_100%)]"
+        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(48,32,20,0.94)_0%,rgba(48,32,20,0.72)_32%,rgba(48,32,20,0.12)_58%,rgba(48,32,20,0)_100%)] md:bg-[linear-gradient(90deg,rgba(48,32,20,0.94)_0%,rgba(63,42,27,0.83)_34%,rgba(63,42,27,0.16)_72%,rgba(63,42,27,0.03)_100%)]"
       />
-      <div className="mx-auto w-full max-w-[1440px] px-6 py-16 md:px-8 md:py-20 lg:px-16">
+      <div className="mx-auto w-full max-w-[1440px] px-6 pb-10 pt-16 md:px-8 md:py-20 lg:px-16">
         <div className="max-w-[570px]">
           {tagline ? (
             <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f2d8ae] md:text-xs">

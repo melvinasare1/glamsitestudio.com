@@ -315,6 +315,7 @@ function heavenlyMassageDemo(): SiteData {
       headline: "Relax, restore and rebalance.",
       subheadline: "Professional massage treatments in a calm, private space, tailored to help you unwind, relieve tension and feel your best.",
       image: "/templates/heavenly-massage/hero.webp",
+      mobileImage: "/templates/heavenly-massage/hero-mobile.webp",
       secondaryImage: "/templates/heavenly-massage/hero-secondary.webp",
       ctaLabel: "Book appointment",
     },

@@ -17,7 +17,7 @@ is `packages/shared/src/site-content.ts`; this page explains it.
 | Section | Fields | Edited where |
 | --- | --- | --- |
 | Brand (always on) | Logo, main colour, accent colour, font style | Website editor |
-| Top of page | Headline, line under it, main photo, button text | Website editor |
+| Top of page | Headline, line under it, main photo, phone photo, button text | Website editor |
 | About | Heading, your story, photo | Website editor |
 | Services | Heading, intro | Services page: categories, name, duration, price (or "from" price), description, show on site, bookable online |
 | Team | Heading, intro | Team page: name, role, bio, photo, services they do |

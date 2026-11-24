@@ -165,6 +165,12 @@ export const SITE_SECTIONS: SectionDefinition[] = [
       },
       { key: "image", label: "Main photo", type: "image", description: "A wide photo works best." },
       {
+        key: "mobileImage",
+        label: "Phone photo",
+        type: "image",
+        description: "Optional. Shown on phones instead of the main photo. A portrait photo works best.",
+      },
+      {
         key: "ctaLabel",
         label: "Button text",
         type: "text",

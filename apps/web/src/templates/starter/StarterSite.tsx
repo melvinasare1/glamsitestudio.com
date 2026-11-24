@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- the logo's aspect ratio is unknown, so it stays a plain <img> */
 import Image from "next/image";
+import { HeroPhoto } from "../HeroPhoto";
 import {
   isSectionEnabled,
   sectionFlag,
@@ -37,15 +38,17 @@ export function StarterSite({ data, demo = false }: { data: SiteData; demo?: boo
   const renderers: Partial<Record<SectionKey, () => React.ReactNode>> = {
     hero: () => {
       const image = sectionText(content, "hero", "image");
+      const mobileImage = sectionText(content, "hero", "mobileImage");
+      const hasPhoto = Boolean(image || mobileImage);
       return (
         <section key="hero" className="relative overflow-hidden bg-[var(--accent)]">
-          {image ? (
+          {hasPhoto ? (
             <>
-              <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" />
+              <HeroPhoto image={image} mobileImage={mobileImage} priority className="object-cover" />
               <div className="absolute inset-0 bg-black/40" aria-hidden />
             </>
           ) : null}
-          <div className={`relative mx-auto max-w-5xl px-6 py-28 md:py-40 ${image ? "text-white" : ""}`}>
+          <div className={`relative mx-auto max-w-5xl px-6 py-28 md:py-40 ${hasPhoto ? "text-white" : ""}`}>
             <h1 className="max-w-2xl font-[family-name:var(--font-heading)] text-4xl leading-tight md:text-6xl">
               {sectionText(content, "hero", "headline", business.name)}
             </h1>

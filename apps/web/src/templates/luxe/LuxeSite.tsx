@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- the logo's aspect ratio is unknown, so it stays a plain <img> */
 import { ArrowRight, Mail, MapPin, MessageCircle, Phone, Plus, Star } from "lucide-react";
 import Image from "next/image";
+import { HeroPhoto } from "../HeroPhoto";
 import { reviewRating, sectionFlag, sectionItems, sectionText } from "@glamsite/shared/site-content";
 import { formatAddress, formatDuration, formatServicePrice, groupServices, hoursByDay } from "@glamsite/shared/format";
 import { visibleSections } from "@glamsite/shared/templates";
@@ -131,6 +132,7 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
   const ctaLabel = sectionText(content, "hero", "ctaLabel");
   const address = formatAddress(business.address);
   const heroImage = sectionText(content, "hero", "image");
+  const heroMobileImage = sectionText(content, "hero", "mobileImage");
 
   const colors = brandColors(business, { primary: LUXE.espresso, accent: LUXE.gold });
   const font = brandFont(business);
@@ -222,15 +224,13 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
       <main id="top">
         {shown.has("hero") ? (
           <section className="relative isolate overflow-hidden bg-[var(--lx-dark)] text-[var(--lx-dark-ink)]">
-            {heroImage ? (
+            {heroImage || heroMobileImage ? (
               <>
-                <Image
-                  src={heroImage}
-                  alt=""
-                  fill
+                <HeroPhoto
+                  image={heroImage}
+                  mobileImage={heroMobileImage}
                   priority
-                  sizes="100vw"
-                  className="-z-10 object-cover object-[72%_center]"
+                  className="-z-10 object-cover object-center md:object-[72%_center]"
                 />
                 {/* Keeps the headline readable over any owner photo. */}
                 <div
@@ -241,7 +241,7 @@ export function LuxeSite({ data, demo = false }: { data: SiteData; demo?: boolea
             ) : null}
             <div
               className={`${container} flex min-h-[600px] flex-col justify-end pb-14 pt-40 md:min-h-[640px] md:justify-center md:py-28 ${
-                heroImage ? "text-[#f8f5ee]" : ""
+                heroImage || heroMobileImage ? "text-[#f8f5ee]" : ""
               }`}
             >
               <div className="max-w-[34rem]">
