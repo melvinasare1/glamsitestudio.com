@@ -307,10 +307,93 @@ function barberDemo(): SiteData {
   };
 }
 
+function heavenlyMassageDemo(): SiteData {
+  const content: SiteContent = {
+    brand: { primaryColor: "#304321", accentColor: "#fbf5ef", font: "elegant" },
+    hero: {
+      tagline: "Massage · Wellness · Recovery",
+      headline: "Relax, restore and rebalance.",
+      subheadline: "Professional massage treatments in a calm, private space, tailored to help you unwind, relieve tension and feel your best.",
+      image: "/templates/heavenly-massage/hero.webp",
+      ctaLabel: "Book appointment",
+    },
+    about: {
+      heading: "A space for total relaxation.",
+      body: "Heavenly Massage is a welcoming space to slow down and reconnect with yourself. Our personalised treatments are designed to ease everyday tension, encourage deep relaxation and help you leave feeling renewed.",
+      image: "/templates/heavenly-massage/hero.webp",
+    },
+    services: {
+      heading: "Treatment menu",
+      intro: "Thoughtful treatments for rest, recovery and everyday wellbeing. Choose the experience that feels right for you.",
+    },
+    reviews: {
+      heading: "What our clients say",
+      items: [
+        { quote: "The best massage I've had in years. So relaxing and professional.", name: "Amara K.", source: "Google", rating: "5" },
+        { quote: "A peaceful and calming experience from start to finish. I left feeling completely refreshed.", name: "Daniel T.", source: "Google", rating: "5" },
+        { quote: "A lovely atmosphere, friendly team and treatments that really make a difference.", name: "Michelle A.", source: "Google", rating: "5" },
+      ],
+    },
+    visit: {
+      heading: "Opening hours",
+      directions: "Appointments are available throughout the week. Please book ahead to secure your preferred time.",
+      showMap: true,
+    },
+    faqs: {
+      heading: "Common questions",
+      items: [
+        { question: "What should I wear during my massage?", answer: "Wear whatever feels comfortable when you arrive. Your therapist will explain how to get settled and will ensure you are appropriately covered throughout your treatment." },
+        { question: "How early should I arrive?", answer: "Please arrive around 10 minutes before your appointment so you have time to settle in and discuss any preferences with your therapist." },
+        { question: "Can I choose the pressure?", answer: "Absolutely. Let your therapist know what feels comfortable, and you can ask for the pressure to be adjusted at any point." },
+        { question: "What is your cancellation policy?", answer: "Please give at least 24 hours' notice if you need to cancel or reschedule. Your business can update this policy in its booking settings." },
+      ],
+    },
+    booking: {
+      heading: "Ready to unwind?",
+      body: "Book your treatment today and give yourself a little time to feel your best.",
+      ctaLabel: "Book appointment",
+    },
+    contact: {
+      heading: "Get in touch",
+      intro: "Have a question before booking? Send us a message and we'll be happy to help.",
+      showForm: true,
+    },
+    seo: {
+      description: "Discover personalised massage treatments at Heavenly Massage. Relax, restore and rebalance in a calm, welcoming space.",
+    },
+  };
+
+  const data: SiteData = {
+    business: demoBusiness("heavenly-massage", "Heavenly Massage", content),
+    categories: [
+      category("hm-c1", "Massage", 0),
+      category("hm-c2", "Specialist Treatments", 1),
+      category("hm-c3", "Wellness Packages", 2),
+    ],
+    services: [
+      service("hm-s1", "hm-c1", "Relaxation Massage", 60, 6000, 0, { description: "A calming, full-body massage to ease tension and promote relaxation." }),
+      service("hm-s2", "hm-c1", "Deep Tissue Massage", 60, 7000, 1, { description: "Focused pressure to relieve muscle tension and stiffness." }),
+      service("hm-s3", "hm-c1", "Aromatherapy Massage", 60, 6500, 2, { description: "A soothing massage using essential oils to relax the mind and body." }),
+      service("hm-s4", "hm-c2", "Hot Stone Massage", 75, 8500, 0, { description: "Warm stones and flowing massage techniques to soothe tired muscles." }),
+      service("hm-s5", "hm-c2", "Pregnancy Massage", 60, 7500, 1, { description: "A gentle treatment adapted for comfort during pregnancy." }),
+      service("hm-s6", "hm-c3", "Rest & Restore Ritual", 90, 11000, 0, { description: "A longer restorative experience combining massage and quiet time." }),
+    ],
+    staff: [],
+    hours: [
+      ...weekHours("09:00", "20:00", [0, 1, 2, 3, 4]),
+      ...weekHours("10:00", "18:00", [5]),
+      ...weekHours("10:00", "16:00", [6]),
+    ],
+  };
+  data.business.email = "hello@heavenlymassage.example";
+  return data;
+}
+
 const DEMOS: Record<string, () => SiteData> = {
   luxe: luxeDemo,
   salon: salonDemo,
   barber: barberDemo,
+  "heavenly-massage": heavenlyMassageDemo,
 };
 
 /** Demo site for a template; templates without their own demo borrow the salon one. */
