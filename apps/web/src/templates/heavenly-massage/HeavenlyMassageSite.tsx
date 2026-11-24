@@ -4,6 +4,7 @@ import type { SiteData } from "@glamsite/shared/types";
 import { bookingHref } from "../shared";
 import { HeavenlyMassageHeader } from "./HeavenlyMassageHeader";
 import { HeavenlyMassageHero } from "./HeavenlyMassageHero";
+import { HeavenlyMassageTreatments } from "./HeavenlyMassageTreatments";
 import { heavenlySans, heavenlySerif } from "./fonts";
 
 const HEAVENLY = {
@@ -59,11 +60,7 @@ export function HeavenlyMassageSite({ data, demo = false }: { data: SiteData; de
             bookingLabel={sectionText(content, "hero", "ctaLabel", "Book appointment")}
           />
         ) : null}
-        <div className="mx-auto max-w-[1440px] px-6 py-12 text-center md:px-8 md:py-16">
-          <p className="font-[family-name:var(--hm-heading)] text-lg text-[var(--hm-muted)]">
-            {shown.has("services") ? "Your time to relax starts here." : "Welcome to your wellness space."}
-          </p>
-        </div>
+        {shown.has("services") ? <HeavenlyMassageTreatments /> : null}
       </main>
     </div>
   );
