@@ -2,6 +2,7 @@ import { getTemplate } from "@glamsite/shared/templates";
 import type { SiteData } from "@glamsite/shared/types";
 import { LuxeSite } from "./luxe/LuxeSite";
 import { StarterSite } from "./starter/StarterSite";
+import { HeavenlyMassageSite } from "./heavenly-massage/HeavenlyMassageSite";
 
 type SiteComponent = (props: { data: SiteData; demo?: boolean }) => React.ReactNode;
 
@@ -13,6 +14,7 @@ const SITE_COMPONENTS: Record<string, SiteComponent> = {
   luxe: LuxeSite,
   salon: StarterSite,
   barber: StarterSite,
+  "heavenly-massage": HeavenlyMassageSite,
 };
 
 export function SiteRenderer({ data, demo = false }: { data: SiteData; demo?: boolean }) {
