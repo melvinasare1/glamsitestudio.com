@@ -1,4 +1,27 @@
+## Pending · `20261124190000_heavenly_massage_template`
+
+**What:** adds the `heavenly-massage` row to `public.templates`, allowing
+businesses to select the Heavenly Massage template. No existing rows or
+business content are changed.
+
+**File:** `supabase/migrations/20261124190000_heavenly_massage_template.sql`.
+**Undo:** `supabase/rollbacks/20261124190000_heavenly_massage_template.down.sql`.
+
+| | Staging | Production |
+| --- | --- | --- |
+| Before | Not checked in this session | Not checked in this session |
+| Applied | Not applied | Not applied |
+| Verified | Pending | Pending |
+
+**Release gate:** check migration history on staging and production, apply to
+staging first, verify the catalogue row and run the security advisor, then
+apply to production. Do not select this template for a live business until its
+catalogue row is present.
+
+---
+
 # Database change log
+
 
 Every change made to the **staging** or **production** Supabase databases,
 newest first. Use it to see what changed, when, and how to undo it.
