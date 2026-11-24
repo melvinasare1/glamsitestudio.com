@@ -52,7 +52,8 @@ export function HeavenlyMassageSite({ data, demo = false }: { data: SiteData; de
             headline={sectionText(content, "hero", "headline", "Relax, restore and rebalance")}
             tagline={sectionText(content, "hero", "tagline")}
             subheadline={sectionText(content, "hero", "subheadline")}
-            image={sectionText(content, "hero", "image")}\n            secondaryImage={sectionText(content, "hero", "secondaryImage")}
+            image={sectionText(content, "hero", "image")}
+            secondaryImage={sectionText(content, "hero", "secondaryImage")}\n            secondaryImage={sectionText(content, "hero", "secondaryImage")}
             bookingHref={book}
             bookingLabel={sectionText(content, "hero", "ctaLabel", "Book appointment")}
           />
