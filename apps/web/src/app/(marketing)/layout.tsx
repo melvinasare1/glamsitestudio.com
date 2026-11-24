@@ -1,14 +1,12 @@
-import { Bodoni_Moda, Manrope } from "next/font/google";
+import { Playfair_Display, Manrope } from "next/font/google";
 import Header, { Wordmark } from "@/components/marketing/Header";
 import { marketingNav, ownerLoginHref } from "@/components/marketing/nav";
 
-const didone = Bodoni_Moda({
+const didone = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-didone",
   style: ["normal", "italic"],
   weight: ["400", "500", "600"],
-  // Next has no fallback metrics for Bodoni Moda; use the declared fallbacks as-is.
-  adjustFontFallback: false,
   fallback: ["Didot", "Bodoni 72", "Georgia", "serif"],
 });
 
