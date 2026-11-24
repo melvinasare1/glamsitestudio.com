@@ -11,6 +11,7 @@ const CARDS: { name: string; templateId: string | null }[] = [
   { name: "Nail Studio", templateId: null },
   { name: "Barbershop", templateId: "barber" },
   { name: "Lash & Brow", templateId: null },
+  { name: "Heavenly Massage", templateId: "heavenly-massage" },
 ];
 
 function ComingSoonPanel({ name }: { name: string }) {
