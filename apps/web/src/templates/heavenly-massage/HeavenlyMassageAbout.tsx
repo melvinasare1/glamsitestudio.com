@@ -15,7 +15,7 @@ export function HeavenlyMassageAbout({ bookingHref }: { bookingHref: string }) {
           />
         </div>
         <div className="max-w-xl md:py-3">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--hm-muted)] sm:text-xs">About Sōma</p>
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--hm-muted)] sm:text-xs">About Heavenly Massage</p>
           <h2 className="max-w-[600px] font-[family-name:var(--hm-heading)] text-[2.5rem] leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-[3.5rem]">
             A space for total relaxation.
           </h2>
