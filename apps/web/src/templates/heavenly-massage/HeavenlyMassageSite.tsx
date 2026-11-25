@@ -6,6 +6,7 @@ import { HeavenlyMassageHeader } from "./HeavenlyMassageHeader";
 import { HeavenlyMassageHero } from "./HeavenlyMassageHero";
 import { HeavenlyMassageTreatments } from "./HeavenlyMassageTreatments";
 import { HeavenlyMassageAbout } from "./HeavenlyMassageAbout";
+import { HeavenlyMassageMenu } from "./HeavenlyMassageMenu";
 import { heavenlySans, heavenlySerif } from "./fonts";
 
 const HEAVENLY = {
@@ -61,7 +62,10 @@ export function HeavenlyMassageSite({ data, demo = false }: { data: SiteData; de
             bookingLabel={sectionText(content, "hero", "ctaLabel", "Book appointment")}
           />
         ) : null}
-        {shown.has("services") ? <HeavenlyMassageTreatments /> : null}
+        {shown.has("services") ? <>
+          <HeavenlyMassageTreatments />
+          <HeavenlyMassageMenu categories={data.categories} services={data.services} bookingHref={book} />
+        </> : null}
         {shown.has("about") ? <HeavenlyMassageAbout bookingHref={book} /> : null}
       </main>
     </div>
