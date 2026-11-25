@@ -5,6 +5,7 @@ import { bookingHref } from "../shared";
 import { HeavenlyMassageHeader } from "./HeavenlyMassageHeader";
 import { HeavenlyMassageHero } from "./HeavenlyMassageHero";
 import { HeavenlyMassageTreatments } from "./HeavenlyMassageTreatments";
+import { HeavenlyMassageAbout } from "./HeavenlyMassageAbout";
 import { heavenlySans, heavenlySerif } from "./fonts";
 
 const HEAVENLY = {
@@ -61,6 +62,7 @@ export function HeavenlyMassageSite({ data, demo = false }: { data: SiteData; de
           />
         ) : null}
         {shown.has("services") ? <HeavenlyMassageTreatments /> : null}
+        {shown.has("about") ? <HeavenlyMassageAbout bookingHref={book} /> : null}
       </main>
     </div>
   );
