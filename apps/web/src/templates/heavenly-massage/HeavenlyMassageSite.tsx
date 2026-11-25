@@ -8,6 +8,7 @@ import { HeavenlyMassageTreatments } from "./HeavenlyMassageTreatments";
 import { HeavenlyMassageAbout } from "./HeavenlyMassageAbout";
 import { HeavenlyMassageMenu } from "./HeavenlyMassageMenu";
 import { HeavenlyMassageBookingCTA } from "./HeavenlyMassageBookingCTA";
+import { HeavenlyMassageFAQContact } from "./HeavenlyMassageFAQContact";
 import { heavenlySans, heavenlySerif } from "./fonts";
 
 const HEAVENLY = {
@@ -67,6 +68,7 @@ export function HeavenlyMassageSite({ data, demo = false }: { data: SiteData; de
         {shown.has("about") ? <HeavenlyMassageAbout bookingHref={book} /> : null}
         {shown.has("services") ? <HeavenlyMassageMenu categories={data.categories} services={data.services} bookingHref={book} /> : null}
         <HeavenlyMassageBookingCTA bookingHref={book} />
+        <HeavenlyMassageFAQContact items={(content.faqs?.items as {question:string;answer:string}[] | undefined) ?? []} slug={business.slug} demo={demo} />
       </main>
     </div>
   );
