@@ -7,6 +7,7 @@ import { HeavenlyMassageHero } from "./HeavenlyMassageHero";
 import { HeavenlyMassageTreatments } from "./HeavenlyMassageTreatments";
 import { HeavenlyMassageAbout } from "./HeavenlyMassageAbout";
 import { HeavenlyMassageMenu } from "./HeavenlyMassageMenu";
+import { HeavenlyMassageBookingCTA } from "./HeavenlyMassageBookingCTA";
 import { heavenlySans, heavenlySerif } from "./fonts";
 
 const HEAVENLY = {
